@@ -1,0 +1,7 @@
+Written in Python v2.7.12 by DRGN of SmashBoards (Daniel R. Cappel).
+
+Find the official thread here for usage and other documentation: 
+http://smashboards.com/threads/melee-code-manager-easily-add-codes-to-your-game.416437/
+
+
+Check out the second post in the thread above for detailed info on some of this program's functionality and uses.

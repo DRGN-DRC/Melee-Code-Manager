@@ -1,0 +1,16 @@
+# Ignore compiled python files
+*.pyc
+
+# Ignore the options.ini file (user settings)
+# But keeping the "defaultOptions.ini" file, which 
+# will be included and renamed when compiled.
+options.ini
+
+# Ignore directories output by build operations
+/[Bb]uild*/
+
+# Ignore program temporary files
+bin/tempFiles/
+
+# Visual Studio Code project folder
+.vscode
