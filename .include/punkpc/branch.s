@@ -25,6 +25,7 @@
       ori \a, \a, \b @l
       mtctr \a
       bctr;.endif;
-  .endm;.irp l,  l,  ,
+  .endm;.irp l,  l,  ,  
     .macro branch\l,  va:vararg;  b\l\()a \va
     .endm;.endr;.endif;
+
