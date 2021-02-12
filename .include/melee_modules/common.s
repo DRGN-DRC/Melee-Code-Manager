@@ -150,38 +150,29 @@ melee.module common; .if module.included == 0
 .set  OFST_Rumble,0x1CC0
 
 
-.ifndef branchl.purgem;  branchl.purgem = 0;.endif;
-.if branchl.purgem;  branchl.purgem = 0;.purgem branch;.purgem branchl;.endif;
-.irp x,  branchl,  branch
-  .irp y,  .purgem;  \x\y = 1;.endr
-.endr
-# this protects 'branchl' and 'branch' macros from colliding with macros from different modules
+# punkpc has upgraded versions of legacy 'branch' and 'load' instrucitons:
+
+punkpc branch, load
+# 'branch(l)' now accepts an optional register argument, for building the address in
+# - also, 'ba' and 'bla' macros are available as aliases for 'branch' and 'branchl'
+
+# 'load' can now load multiple 32-bit ints, or small quoted strings that start with "> "
+
+load.opt = 0
+# the param 'load.opt' determines whether or not the load macroinstruction optimizes its inputs
+# If set to a non-0 value, then load will reduce loads to 1 instruction, if possible
+# - this requires use of a .if statement, which may create errors if inputs are not yet evaluable
+#   - by turning '.opt' to 0, we avoid using the .if evaluation, and prevent potential errors
+#   - this sacrifices convenience for compatability -- so you may turn it back on if desired
+
+# 'regs' is a prerequisite that gets imported with 'load
+# It provides named registers r0...r31, f0...f31, and cr register names, like 'cr7.eq'
+# It also provides the 'regs' enumerator tool, for naming registers
 
 
-.macro branchl reg, address
-lis \reg, \address @h
-ori \reg,\reg,\address @l
-mtctr \reg
-bctrl
-.endm
-
-.macro branch reg, address
-lis \reg, \address @h
-ori \reg,\reg,\address @l
-mtctr \reg
-bctr
-.endm
 
 
-.ifndef load.purgem;  load.purgem = 0;.endif;
-.if load.purgem; .purgem load;.endif; load.purgem = 1
-# this protects 'load' from colliding with different modules
-
-
-.macro load reg, address
-lis \reg, \address @h
-ori \reg, \reg, \address @l
-.endm
+# other legacy macros remain intact:
 
 .macro backup
 mflr r0
