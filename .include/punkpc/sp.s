@@ -1,6 +1,6 @@
 .ifndef punkpc.library.included
-  .include "punkpc.s";.endif;punkpc.module sp, 3
-.if module.included == 0;  punkpc regs, enc, lmf, spr, items
+  .include "punkpc.s";.endif;punkpc.module sp, 4
+.if module.included == 0;  punkpc regs, enum, enc, lmf, spr, items
   .macro sp_obj.init;  .purgem sp_obj.init;sp.frame = 0;sp.mem_ID = 0;sp.mem_ID$ = 0
     sp.lr.__has_items = 0;stack sp.mem;enc.new sp.chars, 0, 1
     .macro sp_obj,  self,  align,  va:vararg;  enum.new \self, \va
