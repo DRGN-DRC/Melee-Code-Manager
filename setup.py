@@ -6,7 +6,7 @@ from shutil import copyfile
 import sys, os
 
 programName = "Melee Code Manager"
-mcmMainScript = __import__( "Melee Code Manager" ) # This import method is used in order to import a file with spaces in its name.
+mainScript = __import__( "Melee Code Manager" ) # This import method is used in order to import a file with spaces in its name.
 preserveConsole = True # For the console to work, search for the string "logging output" in the main MCM script, and comment out the relevent code there.
 
 # Dependencies are automatically detected, but it might need fine tuning.
@@ -52,7 +52,7 @@ executables = [
 print 'Preparing setup....'
 
 # Normalize the version string for setup ('version' below must be a string, with only numbers or dots)
-simpleVersion = '.'.join( [char for char in mcmMainScript.programVersion.split('.') if char.isdigit()] )
+simpleVersion = '.'.join( [char for char in mainScript.programVersion.split('.') if char.isdigit()] )
 
 setup(
 		name=programName,
@@ -64,7 +64,7 @@ setup(
 
 # Perform file/folder renames
 print '\n'
-print 'Main script version:    ', mcmMainScript.programVersion
+print 'Main script version:    ', mainScript.programVersion
 print 'Simplified version:     ', simpleVersion
 print 'Platform architecture:  ', platformArchitecture
 
@@ -95,7 +95,7 @@ except Exception as err:
 os.rename( programFolder + '\\defaultOptions.ini', programFolder + '\\options.ini' )
 
 # Create a new name for the progam folder (and make sure it's unique) and rename it
-newProgramFolderName = '{} - v{} ({})'.format( programName, mcmMainScript.programVersion, platformArchitecture )
+newProgramFolderName = '{} - v{} ({})'.format( programName, mainScript.programVersion, platformArchitecture )
 newProgramFolderPath = os.path.join( buildFolder, newProgramFolderName )
 i = 2
 while os.path.exists( newProgramFolderPath ):
