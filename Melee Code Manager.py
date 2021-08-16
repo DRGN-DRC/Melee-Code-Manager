@@ -1109,6 +1109,7 @@ def parseModsLibraryFile( filepath, modModulesParent, includePaths ):
 			modType = 'static'
 			basicInfoCollected = parsingErrorOccurred = False
 			offsetString = ''
+			reasonToDisable = ''
 			missingIncludes = False
 			assemblyError = False
 			webLinks = [] # Will be a list of tuples, of the form (urlparseObject, comments)
@@ -1118,7 +1119,7 @@ def parseModsLibraryFile( filepath, modModulesParent, includePaths ):
 			# Iterate over the text/code lines for this mod
 			for rawLine in mod.splitlines():
 				# Separate out comments for parsing purposes.
-				if '##' in rawLine: 
+				if '##' in rawLine:
 					rawLine = rawLine.split( '##' )[0].strip() # Comments with these, '##' (hard comments), are totally ignored by the parser.
 
 				# Separate lines of description or code text from comments
@@ -1156,6 +1157,14 @@ def parseModsLibraryFile( filepath, modModulesParent, includePaths ):
 					elif line.startswith( '[' ) and line.endswith( ']' ):
 						modAuth = line.split(']')[0].replace( '[', '' )
 						basicInfoCollected = True
+
+						# if modName == 'Default Game Settings': # Expected in the 20XX HP 5.0 library
+						# 	reasonToDisable = 'Use the Default Game Settings tab for these.'
+						# 	break
+
+					elif line.lower().startswith( 'customizations:' ):
+						reasonToDisable = 'Customizations not supported.'
+						break
 					else: # Assume all other lines are more description text
 						modDesc.append( rawLine )
 
@@ -1389,7 +1398,8 @@ def parseModsLibraryFile( filepath, modModulesParent, includePaths ):
 				genGlobals['allMods'].append( newModModule )
 
 				# Set the mod widget's status and add it to the global allModNames list
-				if modData == {}: newModModule.setState( 'unavailable', specialStatusText='Missing mod data.' )
+				if reasonToDisable: newModModule.setState( 'unavailable', specialStatusText=reasonToDisable )
+				elif modData == {}: newModModule.setState( 'unavailable', specialStatusText='Missing mod data.' )
 				elif parsingErrorOccurred: newModModule.setState( 'unavailable', specialStatusText='Error detected during parsing.' )
 				elif assemblyError: newModModule.setState( 'unavailable', specialStatusText='Error during assembly' )
 				elif missingIncludes: newModModule.setState( 'unavailable', specialStatusText='Missing include file: ' + preProcessedCustomCode )
@@ -3394,6 +3404,7 @@ def saveCodes(): # (i.e. the magic)
 		return False
 
 	genGlobals['modifiedRegions'] = [] # Used to track static overwrites and to watch for conflicts
+	defaultGameSettingsInstalled = False
 
 	if not onlyUpdateGameSettings.get():
 		# Check for conflicts among the code regions selected for use
@@ -3585,15 +3596,19 @@ def saveCodes(): # (i.e. the magic)
 		else:
 			geckoSummaryReport = [] # May have been added to. Clear it.
 
-		def allocateSpaceInDol( dolSpaceUsedDict, customCode, customCodeLength ): # The customCode input should be preProcessed
+		def allocateSpaceInDol( dolSpaceUsedDict, customCodeLength ):
 			customCodeOffset = -1
 
 			for i, ( areaStart, areaEnd ) in enumerate( allCodeRegions ):
-				spaceRemaining = areaEnd - areaStart - dolSpaceUsedDict['area' + str(i + 1) + 'used'] # value in bytes
+				areaName = 'area' + str(i + 1) + 'used'
+				spaceUsed = dolSpaceUsedDict[areaName] # value in bytes
+				spaceRemaining = areaEnd - areaStart - spaceUsed
 
+				# If there's space remaining in this area, assign the code to here
 				if customCodeLength <= spaceRemaining:
-					customCodeOffset = areaStart + dolSpaceUsedDict['area' + str(i + 1) + 'used']
-					dolSpaceUsedDict['area' + str(i + 1) + 'used'] += customCodeLength # Updates the used area reference.
+					customCodeOffset = areaStart + spaceUsed
+
+					dolSpaceUsedDict[areaName] += customCodeLength # Updates the used area reference.
 					break
 
 			return customCodeOffset # In bytes
@@ -3640,7 +3655,7 @@ def saveCodes(): # (i.e. the magic)
 
 							if functionName not in standaloneFunctionsUsed: # Has not been added to the dol. Attempt to map it.
 								customCodeLength = getCustomCodeLength( functionPreProcessedCustomCode )
-								customCodeOffset = allocateSpaceInDol( dolSpaceUsed, functionPreProcessedCustomCode, customCodeLength )
+								customCodeOffset = allocateSpaceInDol( dolSpaceUsed, customCodeLength )
 
 								if customCodeOffset == -1:
 									# No more space in the DOL. (Mods requiring custom code space up until this one will be still be saved.)
@@ -3720,7 +3735,7 @@ def saveCodes(): # (i.e. the magic)
 									break
 								else:
 									# Find a place for the custom code.
-									customCodeOffset = allocateSpaceInDol( dolSpaceUsed, preProcessedCustomCode, customCodeLength )
+									customCodeOffset = allocateSpaceInDol( dolSpaceUsed, customCodeLength )
 								
 									if customCodeOffset == -1:
 										# No more space in the DOL. Injection codes up to this one (and all other changes) will be still be saved.
@@ -3750,6 +3765,8 @@ def saveCodes(): # (i.e. the magic)
 										if returnCode != 0 and returnCode != 100:
 											specifics = 'An error occurred while processing this custom code:\n\n' + customCode + '\n\n'
 											cmsg( specifics + preProcessedCustomCode, 'Error 03 Resolving Custom Syntaxes' )
+											problemWithMod = True
+											break
 										elif preProcessedCustomCode == '' or not validHex( preProcessedCustomCode ):
 											msg( 'There was an error while replacing custom branch syntaxes in an injection code for "' + mod.name + '".' )
 											problemWithMod = True
@@ -3802,6 +3819,9 @@ def saveCodes(): # (i.e. the magic)
 					mod.setState( 'enabled' )
 					addToInstallationSummary( mod.name, mod.type, summaryReport )
 
+					if mod.name == 'Default Game Settings': # Prevent updates from the Default Game Settings tab
+						defaultGameSettingsInstalled = True
+
 		# End of primary code-saving pass. Finish updating the Summary tab.
 		if geckoSummaryReport:
 			addToInstallationSummary( geckoInfrastructure=True )
@@ -3843,7 +3863,7 @@ def saveCodes(): # (i.e. the magic)
 	updateSummaryTabTotals()
 
 	# If this is SSBM, check the Default Game Settings tab for changes to save. (function execution skips to here if onlyUpdateGameSettings=True)
-	if dol.isMelee and dol.revision in settingsTableOffset:
+	if dol.isMelee and dol.revision in settingsTableOffset and not defaultGameSettingsInstalled:
 		for widgetSettingID in gameSettingsTable:
 			selectedValue = currentGameSettingsValues[widgetSettingID].get()
 			valueInDOL = getGameSettingValue( widgetSettingID, 'fromDOL' )
