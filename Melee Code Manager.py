@@ -3608,6 +3608,10 @@ def saveCodes(): # (i.e. the magic)
 				if customCodeLength <= spaceRemaining:
 					customCodeOffset = areaStart + spaceUsed
 
+					# If this code isn't a multiple of 4 bytes, add some padding to ensure the next code will be aligned
+					if customCodeLength % 4 != 0:
+						customCodeLength += 4 - (customCodeLength % 4)
+
 					dolSpaceUsedDict[areaName] += customCodeLength # Updates the used area reference.
 					break
 
