@@ -365,14 +365,37 @@ class dolInitializer( object ):
 					 'And installing mods may break game functionality.', 'Revision Uncertainty', root )
 
 	def checkIf20XX( self ):
+		
+		""" 20XX has a version string in the DOL at 0x0x3F7158, preceded by an ASCII string of '20XX'.
+			Versions up to 4.07++ used an ASCII string for the version as well (v4.07/4.07+/4.07++ have the same string).
+			Versions 5.x.x use a new method of project code, major version, minor version, and patch, respectively (one byte each). """
 
-		""" Checks the DOL file size, and looks for a 4-byte value (which is also the file size) 
-			at the end of the DOL file, in order to determine whether it's a DOL for 20XX HP. 
-			Note that the file data is actually a string to make certain things easier (and because 
-			of how this program was initially written). """
+		# Check for the '20XX' string
+		if self.data[0x3F7154*2:0x3F7154*2+8] != '32305858':
+			self.is20XX = ''
+			return
 
-		if len( self.data ) / 2 == 0x438800 and self.data[-8:] == '00438800':
-			self.is20XX = True
+		versionData = bytearray.fromhex( self.data[0x3F7158*2:0x3F7158*2+8] )
+		
+		# Check if using the new v5+ format
+		if versionData[0] == 0:
+			self.project, self.major, self.minor, self.patch = struct.unpack( 'BBBB', versionData )
+			self.is20XX = '{}.{}.{}'.format( self.major, self.minor, self.patch )
+		
+		else: # Using the old string format, with just major and minor
+			self.is20XX = versionData.decode( 'ascii' )
+
+			# Parse out major/minor versions
+			major, minor = self.is20XX.split( '.' )
+			self.major = int( major )
+			self.minor = int( minor )
+
+			# May be able to be more accurate
+			if self.is20XX == '4.07' and len( self.data ) == 0x438800 and self.data[-4:] == bytearray( b'\x00\x43\x88\x00' ):
+				self.is20XX = '4.07++'
+				self.patch = 2
+			else:
+				self.patch = 0
 
 	def writeSig( self ):
 		
@@ -448,7 +471,8 @@ class dolInitializer( object ):
 		# General check for DOL revision (region + version). This will prompt the user if it cannot be determined.
 		self.getDolVersion()
 
-		self.checkIf20XX()
+		if self.isMelee:
+			self.checkIf20XX()
 
 		if ( self.region == 'NTSC' or self.region == 'PAL' ) and '.' in self.version: 
 			self.revision = self.region + ' ' + self.version
@@ -520,7 +544,7 @@ class dolInitializer( object ):
 				continue
 
 			# Check if the region/version of these regions are relavant to the currently loaded DOL revision
-			elif 'ALL' in revisionList or self.revision in revisionList:
+			if 'ALL' in revisionList or self.revision in revisionList:
 
 				# Validate the regions; perform basic checks that they're valid ranges for this DOL
 				for i, ( regionStart, regionEnd ) in enumerate( regions, start=1 ):
