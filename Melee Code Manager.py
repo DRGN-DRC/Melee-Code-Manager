@@ -540,8 +540,8 @@ class dolInitializer( object ):
 			revisionList, regionName = parseSettingsFileRegionName( fullRegionName )
 
 			# Skip recent 20XX regions if this is not a recent 20XX DOL (v4.07++ or higher)
-			if not self.is20XX and regionName.startswith( '20XXHP' ):
-				continue
+			# if not self.is20XX and regionName.startswith( '20XXHP' ):
+			# 	continue
 
 			# Check if the region/version of these regions are relavant to the currently loaded DOL revision
 			if 'ALL' in revisionList or self.revision in revisionList:
@@ -2537,13 +2537,13 @@ def parseCodeForStandalones( preProcessedCode, requiredFunctions, missingFunctio
 			for functionName in newFunctionNames:
 				if functionName in requiredFunctions: continue # This function has already been analyzed
 
-				requiredFunctions.add( functionName )
+				requiredFunctions.append( functionName )
 
 				# Recursively check for more functions that this function may reference
 				if functionName in genGlobals['allStandaloneFunctions']:
 					parseCodeForStandalones( genGlobals['allStandaloneFunctions'][functionName][2], requiredFunctions, missingFunctions )
-				else:
-					missingFunctions.add( functionName )
+				elif functionName not in missingFunctions:
+					missingFunctions.append( functionName )
 
 	return requiredFunctions, missingFunctions
 
@@ -2553,15 +2553,15 @@ def getRequiredStandaloneFunctionNames( mod ):
 	""" Gets the names of all standalone functions a particular mod requires. 
 		Returns a list of these function names, as well as a list of any missing functions. """
 
-	functionNames = set()
-	missingFunctions = set()
+	functionNames = []
+	missingFunctions = []
 
 	# This loop will be over a list of tuples (code changes) for a specific game version.
 	for codeChange in getModCodeChanges( mod ):
 		if codeChange[0] != 'gecko': #todo allow gecko codes to have SFs
-			functionNames, missingFunctions = parseCodeForStandalones( codeChange[5], functionNames, missingFunctions ) # codeChange[5] is preProcessedCustomCode
+			parseCodeForStandalones( codeChange[5], functionNames, missingFunctions ) # codeChange[5] is preProcessedCustomCode
 
-	return list( functionNames ), list( missingFunctions ) # functionNames will also include those that are missing
+	return functionNames, missingFunctions # functionNames will also include those that are missing
 
 
 def checkGeckoInfrastructure():
