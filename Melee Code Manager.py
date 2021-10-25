@@ -7073,7 +7073,8 @@ def assembleBranch( branchInstruction, branchDistance ):
 		branchDistance += 1
 	elif branchInstruction == 'bal' or branchInstruction == 'bla': # Interpret the address as absolute and store the link register
 		branchDistance += 3
-	else: useAssembler == True # Last resort, since this will take much longer
+	else:
+		useAssembler = True # Last resort, since this will take much longer
 
 	if useAssembler:
 		fullInstruction = branchInstruction + ' ' + str( branchDistance ) + '\n' # newLine char prevents an assembly error message.
