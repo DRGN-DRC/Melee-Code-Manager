@@ -6414,8 +6414,6 @@ class AsmToHexConverter( basicWindow ):
 			#self.assemblyTime.set( '' )
 			return
 
-		hexCode = hexCode.replace( '|S|', '' ) # Removes special branch syntax separators
-
 		# Insert the new hex code
 		self.hexCodeEntry.insert( 'end', hexCode )
 
@@ -7690,6 +7688,7 @@ class CommandProcessor( object ):
 		for rawLine in codeLinesList:
 			# Start off by filtering out comments
 			codeLine = rawLine.split( '#' )[0].strip()
+			if not codeLine: continue
 
 			if compilationPlaceholder in codeLine or branchMarker in codeLine:
 				# This should be a very rare problem, so I'm not going to bother with suppressing this
@@ -7763,12 +7762,13 @@ class CommandProcessor( object ):
 
 			commandLineArray = []
 			specialBranchIndex = 0
+			lastLineSpecial = False
 
 			if discardWhitespace:
 				for command in commandArray:
 
 					# Add the previously saved special command(s).
-					if command == branchMarker: 
+					if command == branchMarker:
 						commandLineArray.append( specialBranches[specialBranchIndex] )
 						specialBranchIndex += 1
 
@@ -7792,7 +7792,7 @@ class CommandProcessor( object ):
 						specialBranchIndex += 1
 
 					# Add this command and the next on the same line if neither is a special syntax.
-					elif i < len( commandArray ) and commandArray[i] != 'DEADBEFE':
+					elif i < len( commandArray ) and commandArray[i] != branchMarker:
 						commandLineArray.append( command + ' ' + commandArray[i] )
 						skip = True
 
@@ -7943,8 +7943,9 @@ class CommandProcessor( object ):
 
 		# Resolve individual syntaxes to finished assembly and/or hex
 		for i, section in enumerate( customCodeSections ):
+			if not section: continue
 
-			if section.startswith( 'sbs__' ): # Something of the form 'bl 0x80001234' or 'bl <function>'; build a branch from this
+			elif section.startswith( 'sbs__' ): # Something of the form 'bl 0x80001234' or 'bl <function>'; build a branch from this
 				section = section[5:] # Removes the 'sbs__' identifier
 
 				if debugging:
@@ -7985,11 +7986,8 @@ class CommandProcessor( object ):
 				if not requiresAssembly: # The preProcessed customCode won't be used if reassembly is required; so don't bother replacing those lines
 					customCodeSections[i] = assembleBranch( branchInstruction, branchDistance ) # Assembles these arguments into a finished hex string
 
-				# Check if this was the last section
-				if i + 1 == len( customCodeSections ):
-					returnCode = 100
-
 				byteOffset += 4
+				returnCode = 100
 
 			elif section.startswith( 'sym__' ): # Contains a function symbol; something like 'lis r3, (<<function>>+0x40)@h'; change the symbol to an address
 				section = section[5:]
@@ -8022,16 +8020,15 @@ class CommandProcessor( object ):
 				requiresAssembly = True
 				resolvedAsmCodeLines.append( section )
 
-				# Check if this was the last section
-				if i + 1 == len( customCodeSections ):
-					returnCode = 100
-
 				byteOffset += 4
+				returnCode = 100
 
 			else: # This code should already be pre-processed hex (assembled, with whitespace removed)
 				byteOffset += len( section ) / 2
+				returnCode = 0
 
-		if errorDetails: return ( 1, errorDetails )
+		if errorDetails:
+			return ( 1, errorDetails )
 
 		# Assemble the final code using the full source (raw) code
 		if requiresAssembly and rawCodeIsAssembly:
