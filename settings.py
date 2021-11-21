@@ -148,7 +148,7 @@ geckoConfiguration = {
 #	Tournament Mode Region, P1 for the codehandler (Aux Code Regions is a good alternative, but you will lose use of the "Enable OSReport Print on Crash" code)
 
 # The following codehandler is a modified version of the one posted and discussed here: http://smashboards.com/threads/ssbm-dol-that-accepts-gecko-codes.403755/
-# This will only be added to the DOL if Gecko Codes are used.
+# This is a fallback, and will only be added to the DOL if Gecko Codes are used and codehandler.bin is not found in the root directory.
 geckoCodehandler = ('9421FF58900100087C0802A6900100AC7C0000269001000C7C0902A6900100107C0102A690010014BC6100187F2000A6633A2000735AF9FF7F400124D8410098' # 1 line = 64 bytes
 					'D86100A03FE080003E80CC00A3944010639500FFB2B440107FA802A63DE0445261EF474E63E718083CC080007CD03378390000003C6000D06063C0DE808F0000'
 					'7C03200040820018808F00047C0320004082000C39EF00084800004C7FA803A6B3944010C8410098C86100A07F2000A6800100AC7C0803A68001000C7C0FF120'

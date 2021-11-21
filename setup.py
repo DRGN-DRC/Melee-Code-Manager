@@ -19,7 +19,7 @@ buildOptions = dict(
 		'About.txt',
 		'bin',
 		'defaultOptions.ini',
-		#'geckoCodehandler0.bin',
+		'codehandler.bin',
 		'imgs',
 		'Mods Library',
 		'settings.py',
