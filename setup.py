@@ -7,15 +7,12 @@ import sys, os
 
 programName = "Melee Code Manager"
 mainScript = __import__( "Melee Code Manager" ) # This import method is used in order to import a file with spaces in its name.
-preserveConsole = True # For the console to work, search for the string "logging output" in the main MCM script, and comment out the relevent code there.
+preserveConsole = False # For the console to work, search for the string "logging output" in the main MCM script, and comment out the relevent code there.
 
 # Dependencies are automatically detected, but it might need fine tuning.
 
-keepTheseIncludes = ( 'CommonMCM.s', 'punkpc' ) # Files other than these in the new .include folder will be deleted (assumed to be test files)
-
 buildOptions = dict(
 	packages = [], 
-	#includes = [newTkDnD],
 	excludes = [], 
 	include_files = [
 		'.include',
@@ -81,15 +78,16 @@ else: # The loop above didn't break
 	sys.exit( 2 )
 
 # Delete extra (test) .include items
-try:
-	rootIncludeFolder = os.path.join( programFolder, '.include' )
-	for item in os.listdir( rootIncludeFolder ):
-		if item not in keepTheseIncludes:
-			os.remove( os.path.join( rootIncludeFolder, item ) )
-	print '\nRemoved test .include files'
-except Exception as err:
-	print '\nUnable to remove test .include files.'	#	<- Access is denied??
-	print err
+#keepTheseIncludes = ( 'CommonMCM.s', 'punkpc' ) # Files other than these in the new .include folder will be deleted (assumed to be test files)
+# try:
+# 	rootIncludeFolder = os.path.join( programFolder, '.include' )
+# 	for item in os.listdir( rootIncludeFolder ):
+# 		if item not in keepTheseIncludes:
+# 			os.remove( os.path.join( rootIncludeFolder, item ) )
+# 	print '\nRemoved test .include files'
+# except Exception as err:
+# 	print '\nUnable to remove test .include files.'	#	<- Access is denied??
+# 	print err
 
 # Rename the default options (.ini) file
 os.rename( programFolder + '\\defaultOptions.ini', programFolder + '\\options.ini' )
@@ -103,6 +101,3 @@ while os.path.exists( newProgramFolderPath ):
 	i += 1
 os.rename( programFolder, newProgramFolderPath )
 print 'Program folder renamed to', os.path.basename( newProgramFolderPath )
-
-# Open the build folder for viewing
-os.startfile( buildFolder )

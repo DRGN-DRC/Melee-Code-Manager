@@ -18,8 +18,6 @@ import json	# For opening/parsing yaml config files (used for alternate mod fold
 import errno
 import codecs
 import sys, csv
-import datetime
-#import win32api # Needs to be installed via "pip install pywin32"
 import webbrowser # Used to open a web page (the Melee Workshop, from the createNewDolMod function) or text file.
 import subprocess, math # For communication with command line, and rounding operations, respectively.
 import struct, binascii # For converting byte strings to integers. And binascii for the file hash function.
@@ -290,6 +288,11 @@ class dolInitializer( object ):
 		self.customCodeRegions = OrderedDict()
 		self.isLoading = False
 
+		self.project = -1
+		self.major = -1
+		self.minor = -1
+		self.patch = -1
+
 	def checkIfMelee( self ):
 		# Check the DOL for a string of "Super Smash Bros. Melee" at specific locations
 		self.isMelee = True
@@ -391,7 +394,7 @@ class dolInitializer( object ):
 			self.minor = int( minor )
 
 			# May be able to be more accurate
-			if self.is20XX == '4.07' and len( self.data ) == 0x438800 and self.data[-4:] == bytearray( b'\x00\x43\x88\x00' ):
+			if self.is20XX == '4.07' and len( self.data ) == 0x438800 and bytearray.fromhex( self.data[-8:] ) == bytearray( b'\x00\x43\x88\x00' ):
 				self.is20XX = '4.07++'
 				self.patch = 2
 			else:
@@ -982,6 +985,34 @@ def readRecievedFile( filepath, defaultProgramStatus='', checkForCodes=True ):
 			else:
 				print '\t', key + ':', value
 		print ''
+	
+	# Load settings from the settings.py file
+	loadRegionOverwriteOptions()
+
+	twentyXXv4Option = overwriteOptions.get( "20XXHP 4.07 Regions" )
+	twentyXXv5Option = overwriteOptions.get( "20XXHP 5.0 Regions" )
+
+	# Prompt the user to ask if they'd like to enable 20XX code regions
+	if dol.is20XX and dol.major == 4 and dol.minor == 7 and twentyXXv4Option and not twentyXXv4Option.get(): # v4.07 loaded, but custom regions not enabled
+	
+		if tkMessageBox.askyesno( 'Enable Custom Code Regions?', ('It Looks like the given ' + dol.type.upper() + ' is for 20XX, v4.07. '
+									'Would you like to enable the "20XXHP 4.07 Regions" for custom code?') ):
+			for regionName, boolVar in overwriteOptions.items():
+				if regionName == '20XXHP 4.07 Regions': boolVar.set( True )
+				else: boolVar.set( False )
+
+			saveOptions()
+
+	# Prompt the user to ask if they'd like to enable 20XX code regions
+	elif dol.is20XX and dol.major == 5 and twentyXXv5Option and not twentyXXv5Option.get(): # v5 loaded, but custom regions not enabled
+	
+		if tkMessageBox.askyesno( 'Enable Custom Code Regions?', ('It Looks like the given ' + dol.type.upper() + ' is for 20XX, v5. '
+									'Would you like to enable the "20XXHP 5.0 Regions" for custom code?') ):
+			for regionName, boolVar in overwriteOptions.items():
+				if regionName == '20XXHP 5.0 Regions': boolVar.set( True )
+				else: boolVar.set( False )
+
+			saveOptions()
 
 	if checkForCodes and dol.data:
 		collectAllStandaloneFunctions()
@@ -8230,10 +8261,10 @@ def updateSummaryTabTotals():
 			childNames.append( childText )
 			if childText == '\t-  Branch': continue # Injection branch
 
-			# Track a few metrics
 			childChangeType, _, bytesChanged, childFreeSpaceUsed = modsSummaryTree.item( child, 'values' )
 			bytesChanged = int( bytesChanged, 16 )
 
+			# Track a few metrics and collect SF names
 			if childChangeType == 'SO':
 				if bytesChanged == 1:
 					total1byteOverwrites += 1
@@ -8289,6 +8320,7 @@ def updateSummaryTabTotals():
 		totalCodelistOverhead = 16 + injectionsOverhead + staticGeckoOverhead # +16 for the codelist wrapper
 	else:
 		totalCodelistOverhead = 0
+	
 	print ''
 	print 'Total mods installed:', totalModsInstalled
 	print 'Total injections:', totalInjections

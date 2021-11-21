@@ -55,7 +55,7 @@ customCodeRegions = OrderedDict([
 
 																								#______________
 	( 'NTSC 1.02|20XXHP 5.0 Regions', [ ( 0x39C, 0x498 ), ( 0x8CC, 0x998 ), ( 0x9CC, 0xA98 ),		#          \
-										( 0xECC, 0xF98 ), ( 0xFCC, 0x1098 ), ( 0x1308, 0x1398 ),	  #         \_____ Common Code Regions (0x87C bytes)
+										( 0xECC, 0xF98 ), ( 0xFCC, 0x1098 ), ( 0x1308, 0x1398 ),	  #         \_____ Subset of Common Code Regions (0x87C bytes)
 										( 0x1508, 0x1598 ), ( 0x15CC, 0x1698 ), ( 0x18CC, 0x1998 ),	    #       |
 										( 0x1ECC, 0x1F98 ), ( 0x20CC, 0x2198 ),					#______________|
 										( 0x18DCC0, 0x197B30 ), 				# Tournament Mode Region 	(0x9E70)
@@ -63,7 +63,7 @@ customCodeRegions = OrderedDict([
 	 									( 0x32C998, 0x332834 ), 				# Extra USB/MCC Region 		(0x5E9C)
 										#( 0x39063C, 0x3907F4 ), ] ),			# Area 5 of USB/MCC 		(0x1B8)
 										( 0x39063C, 0x39078C ), ] ), 			# Area 5 of USB/MCC 		(0x150) # Ended early for space for codes with static location
-																						# Total space = 0x10ED8 Bytes
+																						# Total space = 0x10E70 Bytes
 
 	# The following regions are used for the multiplayer tournament mode (which of course will no longer be functional if you use this space). 
 	# If you use this space, you may want to add a code that prevents people from accessing this mode so that the game doesn't crash when someone tries to use it.
