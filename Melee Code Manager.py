@@ -1500,7 +1500,16 @@ class ModsLibraryParser():
 				mod.missingIncludes = ''
 
 				mod.includePaths = self.includePaths
-				mod.webLinks = codeset.get( 'webLinks', () )
+				webLinks = codeset.get( 'webLinks', () )
+
+				# Validate web links
+				mod.webLinks = []
+				if webLinks:
+					for item in webLinks:
+						if len( item ) == 2:
+							mod.webLinks.append( item )
+						elif type( item ) == str: # Probably just a URL missing the comment
+							mod.webLinks.append( (item, '') )
 
 				buildSet = codeset.get( 'build' )
 
@@ -8214,15 +8223,6 @@ def updateSummaryTabTotals():
 		totalFreeSpaceUsed += int( freeSpaceUsed, 16 )
 		childIids = modsSummaryTree.get_children( item )
 
-		if changeType == 'SF':
-			# Iterate over the changes for this mod, looking for standalone functions
-			for child in childIids:
-				childChangeType, _, _, childFreeSpaceUsed = modsSummaryTree.item( child, 'values' )
-
-				if childChangeType == 'SF' and modsSummaryTree.item( child, 'text' ) not in sfItems: 
-					grandTotalStandalonesSpaceUsed += int( childFreeSpaceUsed, 16 )
-					sfItems.append( modsSummaryTree.item( child, 'text' ) )
-
 		# Store this mod and it's children to remember their order (and original child names)
 		childNames = []
 		for child in childIids:
@@ -8231,8 +8231,9 @@ def updateSummaryTabTotals():
 			if childText == '\t-  Branch': continue # Injection branch
 
 			# Track a few metrics
-			childChangeType, _, bytesChanged, _ = modsSummaryTree.item( child, 'values' )
+			childChangeType, _, bytesChanged, childFreeSpaceUsed = modsSummaryTree.item( child, 'values' )
 			bytesChanged = int( bytesChanged, 16 )
+
 			if childChangeType == 'SO':
 				if bytesChanged == 1:
 					total1byteOverwrites += 1
@@ -8243,20 +8244,46 @@ def updateSummaryTabTotals():
 				elif bytesChanged == 4:
 					total4byteOverwrites += 1
 					staticGeckoOverhead += 8
-				else: 
+				else:
 					totalNbyteOverwrites += 1
 					staticGeckoOverhead += 8 + bytesChanged
-			if childChangeType == 'IM':
+			elif childChangeType == 'IM':
 				totalInjections += 1
 				if bytesChanged % 8 == 0: injectionsOverhead += 8
 				else: # Code not an even multiple of 8 bytes; would require an extra nop if in Gecko code form
 					injectionsOverhead += 0xC
+			elif childChangeType == 'SF':
+				itemText = modsSummaryTree.item( child, 'text' )
+				sfName = itemText.split( ':' )[1].strip() # Remove preceding '- SF: '
+
+				if sfName not in sfItems:
+					grandTotalStandalonesSpaceUsed += int( childFreeSpaceUsed, 16 )
+					sfItems.append( sfName )
 
 		modsSummaryTree.originalSortOrder.append( ( item, childIids, childNames ) )
+		
+	# Count modules composed of only standalone functions; these won't be in the treeview widget above
+	sfModules = 0
+	if sfItems:
+		for mod in genGlobals['allMods']:
+			if mod.state == 'unavailable': continue
+
+			# Check if this is a SF-only module
+			functionsOnly = True
+			isUsed = False
+			for codeChange in getModCodeChanges( mod ):
+				if not codeChange[0] == 'standalone': 
+					functionsOnly = False
+					break
+				elif codeChange[2] in sfItems:
+					isUsed = True
+
+			if functionsOnly and isUsed:
+				sfModules += 1
 
 	# Count the number of mods installed, excluding extra items in the summary tree that aren't actually mods
-	totalModsInstalled = len( modsSummaryTreeChildren ) - len( modsSummaryTree.tag_has( 'notMod' ) )
-	#print 'non mods found:', len( modsSummaryTree.tag_has( 'notMod' ) ), ':', modsSummaryTree.tag_has( 'notMod' )
+	totalModsInstalled = len( modsSummaryTreeChildren ) + sfModules
+	totalModsInstalled -= len( modsSummaryTree.tag_has('notMod') )
 
 	if injectionsOverhead > 0 or staticGeckoOverhead > 0:
 		totalCodelistOverhead = 16 + injectionsOverhead + staticGeckoOverhead # +16 for the codelist wrapper
