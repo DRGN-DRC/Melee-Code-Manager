@@ -1,0 +1,188 @@
+GX Functions
+
+GX.setColorUpdate  --  enable/disable writing results to Environmental Frame color/alpha Buffers
+# --- args:
+# r3 = GXBool   update_enable
+
+GX.setAlphaUpdate  --  enable/disable writing results to Environmental Frame alpha Buffers
+# --- args:
+# r3 = GXBool   update_enable
+
+GX.setBlendMode  --  Determines how the pixel color combines with the Environmental Frame Buffer
+# - the pixel color is the "Source" color (from TEV stages like this + Fog)
+# - the EFB is the "Destination" color
+# --- args:
+# r3 = GXBlendMode   type
+# r4 = GXBlendFactor src_factor
+# r5 = GXBlendFactor dst_factor
+# r6 = GXLogicOp     op
+
+GX.setAlphaCompare  --  Resulting comparison is applied to the alpha of the last TEV stage
+# --- args:
+# r3 = GXCompare     comp0
+# r4 = byte          ref0
+# r5 = GXAlphaOp     op
+# r6 = GXCompare     comp1
+# r7 = byte          ref1
+
+GX.setZMode  --  Controls how the Z buffer is updated
+# --- args:
+# r3 = GXBool        compare_enable
+# r4 = GXCompare     func
+# r5 = GXBool        update_enable
+
+GX.setZCompLoc  --  Controls when Z comparison is made -- before or after texturing
+# - before is faster, but may cause alpha texturing blending issues
+# --- args:
+# r3 = GXBool        before_tex
+
+GX.setNumTexGens  --  For texture coords
+# --- args:
+# r3 = byte  nTexGens
+
+GX.setNumTevStages  --  Sets the number of TEV Stages for this drawing
+# - each TEV stage independently controls the color and alpha components in the TEV hardware
+# --- args:
+# r3 = byte  nStages
+
+GX.setTevOrder  --  Assigns a texture coord (tile ID), texture map (texture), and a color ID to a TEV stage
+# - 0xFF is a null input
+# --- args:
+# r3 = GXTevStageID  stage
+# r4 = GXTevCoordID  coord
+# r5 = GXTexMapID    map
+# r6 = GXChannelID   color
+
+GX.setTevOp  --  A shortcut for calling GXSetTevColorIn, GXSetTevAlphaIn, GXSetTevColorOp, and GXSetTevAlphaOp
+# - modes: GX_MODULATE, GX_DECAL, GX_BLEND, GX_REPLACE
+# --- args:
+# r3 = GXTevStageID  id
+# r4 = GXTevMode     mode
+
+GX.setNumChans  --  Set number of colors (for light?)
+# --- args:
+# r3 = byte         nChans
+
+GX.setChanCtrl  --
+# - if disabled, material color is unmodified on rasterization
+# - if enabled, material color is transformed by lights enabled in light_mask
+# - if enabled, attn_fn and diff_fn can be used to control the angle and diffusion of attenuation
+# - if mat_src, material color comes from the vertex color instead of the material register
+# --- args:
+# r3 = GXChannelID  chan
+# r4 = GXBool       enable
+# r5 = GXColorSrc   amb_src
+# r6 = GXColorSrc   mat_src
+# r7 = GXLigtID     light_mask
+# r8 = GXDiffuseFn  diff_fn
+# r9 = GXAttnFn     attn_fn
+
+GX.setCullMode  --  Control whether front and/or back facing triangles should be drawn
+# --- args:
+# r3 = GXCullMode   mode
+
+
+GX.clearVtxDesc  --  Clears the current vertex attribute format so that new attributes can be defined
+
+GX.setVtxAttrFmt  --  Set attribute format
+# r3 = GXVtxFmt    vtxfmt  (0...7)
+# r4 = GXAttr      attr    (GX_VA_POS = 9)
+# r5 = GXCompCnt   cnt     (GX_POS_XYZ = 1)
+# r6 = GXCompType  type    (GX_F32 = 4)
+# r7 = byte        frac    (fixed point mantissa bit size)
+# EX:
+
+# - attr = 9 (GX_VA_POS)
+# - cnt: XY, XYZ
+# - type: U8, S8, U16, S16, F32
+#   - integer types can use frac param to set a mantissa bit size
+
+# - attr = 11 (GX_VA_CLR0)
+# - cnt: RGB, RGBA
+# - type: RGB565, RGB8, RGBX8, RGBA4, RGBA6, RGBA8
+
+GX.setVtxDesc -- Set the type of a single attribute in the current vertex descriptor
+# r3 = GXAttr       attr  (GX_VA_COLOR0)
+# r4 = GXVTXAttrIn  type  (GX_INDEX16)
+# - type: NONE, INDEX8, INDEX16, DIRECT
+
+GX.loadPosMtxImm -- Load a 3x4 modelview matrix into memory at location `pnidx`
+# r3 = GXMtx3x4  mtx    (address)
+# r4 = GXPNIdx   pnidx  (GX_PNMTX0)
+
+GX.setCurrentMtx -- Selects a specific matrix from PNMTX slots to use for transformations
+# r3 = GXPNIdx   pnidx  (GX_PNMTX0)
+
+GX.begin -- Start input stream for describing vertices
+# r3 =
+
+GX.setAmbColor -- Set Ambient color, for light
+# r3 = color channel ID
+# r4 = color (address of RGBA)
+
+GX.setMatColor -- set Material color, for tev stages
+# r3 = color channel ID
+# r4 = color (address of RGBA)
+
+GX.setArray -- Set an array of indexed attributes, for vertex inputs
+# r3 = attribute ID
+# r4 = attribute array (RAM address)
+# r5 = stride (number of bytes per attribute)
+
+GX.invalidateParams  --
+# --- args:
+# r3 = unk (use -1)
+
+
+
+[GX]
+<GX.setColorUpdate> NTSC 1.02
+b 0x80340d40
+<GX.setAlphaUpdate> NTSC 1.02
+b 0x80340d80
+<GX.setBlendMode> NTSC 1.02
+b 0x80340c3c
+<GX.setAlphaCompare> NTSC 1.02
+b 0x8034051c
+<GX.setZMode> NTSC 1.02
+b 0x80340dc0
+<GX.setZCompLoc> NTSC 1.02
+b 0x80340e38
+<GX.setNumTexGens> NTSC 1.02
+b 0x8033cb78
+<GX.setNumTevStages> NTSC 1.02
+b 0x80340790
+<GX.setTevOrder> NTSC 1.02
+b 0x803405f0
+<GX.setTevOp> NTSC 1.02
+b 0x8033fdc4
+<GX.setNumChans> NTSC 1.02
+b 0x8033e55c
+<GX.setChanCtrl> NTSC 1.02
+b 0x8033e5a8
+<GX.setCullMode> NTSC 1.02
+b 0x8033d350
+<GX.clearVtxDesc> NTSC 1.02
+b 0x8033C3C8
+<GX.setVtxAttrFmt> NTSC 1.02
+b 0x8033C414
+<GX.invalidateParams> NTSC 1.02
+b 0x80361fc4
+<GX.setVtxDesc> NTSC 1.02
+b 0x8033bf00
+<GX.loadPosMtxImm> NTSC 1.02
+b 0x80341494
+<GX.setCurrentMtx> NTSC 1.02
+b 0x80341510
+<GX.begin> NTSC 1.02
+b 0x8033d0dc
+<GX.setAmbColor> NTSC 1.02
+b 0x8033e28c
+<GX.setMatColor> NTSC 1.02
+b 0x8033e3f4
+<GX.setArray> NTSC 1.02
+b 0x8033c80c
+<GX.setLineWidth> NTSC 1.02
+b 0x8033D240
+<GX.setPointSize> NTSC 1.02
+b 0x8033d298

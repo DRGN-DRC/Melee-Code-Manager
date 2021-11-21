@@ -1,0 +1,478 @@
+-==-
+
+Primitive Drawing Module
+2.0 -- Standalone Version
+
+Automatic installation occurs when any of the following functions are used in another code:
+
+
+
+prim.new -- Start drawing vertices using argument params
+# --- args:
+# r3 = number of verts to draw
+# r4 = rParamsH:
+prim.mCullMode = 0xC0000000
+prim.mNoColor  = 0x20000000
+prim.mAlphaBuf = 0x10000000
+prim.mLineSize = 0x0FFF0000
+prim.mZCompLoc = 0x00002000
+prim.mZCompare = 0x00001000
+prim.mZBuffer  = 0x00000800
+prim.mZLogic   = 0x00000700
+prim.mCIndexed = 0x00000080 # rCIBase (from r6)  color
+prim.mCIndex16 = 0x00000040
+prim.mPIndexed = 0x00000020 # rPIBase (from r7)  position
+prim.mPIndex16 = 0x00000010
+prim.mIRecache = 0x00000008
+prim.mPrimType = 0x00000007
+
+# r5 = rParamsL:
+prim.mFixPoint = 0xFF000000
+prim.mOtherMTX = 0x00800000 # rMTX    (from r8)
+prim.mOneColor = 0x00400000 # rColor  (from r9)
+prim.mNoZCoord = 0x00200000
+prim.mNoAChan  = 0x00100000
+prim.mRGBComp  = 0x00080000
+prim.mRGBType  = 0x00070000
+prim.mBMode    = 0x00003000
+prim.mBMSource = 0x00000700
+prim.mBMDest   = 0x00000070
+prim.mBMLogic  = 0x0000000F
+
+# masks for separating fixed point params from parent mask:
+prim.mFixPoint_Enable = 0x80
+prim.mFixPoint_Type   = 0x60
+prim.mFixPoint_Frac   = 0x1F
+
+# --- optional args:
+# r6 = rCIBase -- Color Index Base Address (array of colors)
+# r7 = rPIBase -- Position Index Base Address (array of positions)
+# r8 = rMtx    -- Model view matrix to draw with (override CObj)
+# r9 = rColor  -- A sole color, for all verts
+
+# --- returns:
+# r3 = GX FIFO pipe hardware address
+# - use this to write vertex data by storing to 0x0(r3)
+
+# --- NOTE - `mOneColor` and `m*Index*` features are not completely implemented as of this version
+
+
+
+prim.close -- stop drawing verts, and invalidate the current params
+# no args
+
+
+
+prim.set -- set drawing params without beginning the draw step
+# --- args:
+# r3 = number of verts (to default to)
+#      - the default vert count is only invoked when -1 is given
+# r4 = rParamsH
+# r5 = rParamsL
+# r6 = rCIBase -- Color Index Base Address (array of colors)
+# r7 = rPIBase -- Position Index Base Address (array of positions)
+# r8 = rMtx    -- Model view matrix to draw with (override CObj)
+# r9 = rColor  -- A sole color, for all verts
+
+# --- alternative args:
+# r3 = address of params array:
+prim.xParamsH = 0x00  # --- required
+prim.xParamsL = 0x04  # --- required
+prim.xCIBase  = 0x08  # - optional: prim.mCIndexed
+prim.xPIBase  = 0x0C  # - optional: prim.mPIndexed
+prim.xMtx     = 0x10  # - optional: prim.mOtherMTX
+prim.xColor   = 0x14  # - optional: prim.mOneColor
+# - this syntax variation does not alter the default vert count
+
+
+
+prim.start -- commit to begin drawing from set params
+# --- args:
+# r3 = number of verts
+# --- returns:
+# r3 = GX FIFO pipe (hardware address for storing vertex data)
+
+
+
+prim.reset_mem -- reset params memory to defaults
+# no args
+
+
+
+prim.reset_params -- set params (and memory) back to defaults
+# no args
+
+
+
+# Alternatives to prim.start:
+prim.quads -- alternatives to prim.start
+prim.triangles
+prim.trianglestrip
+prim.trianglefan
+prim.lines
+prim.linestrip
+prim.points
+# --- args:
+# r3 = number of verts
+# - use any of these to force the stated primitive type
+# --- returns:
+# r3 = GX FIFO pipe (hardware address for storing vertex data)
+
+
+
+prim.lines_width
+prim.linestrip_width
+prim.points_width
+# --- args:
+# r3 = number of verts
+# r4 = line/point width
+# - use any of these to force the stated line/point width
+# --- returns:
+# r3 = GX FIFO pipe (hardware address for storing vertex data)
+
+
+---
+
+64-bit Mask (ParamsH, ParamsL) Details:
+
+# prim.mCullMode
+# +C0000000  00000000 = Cull Mode
+#  +8 = cull backface
+#  +4 = cull frontface
+
+# prim.mNoColor
+# +20000000  00000000 = Disable Color buffer Update
+#  false = allow colors
+#  true  = disable updates to the color buffer with this polygon
+#  - logic is inverted for this syntax to preserve backwards compatibility with older versions
+
+# prim.mAlphaBuf
+# +10000000  00000000 = Alpha buffer Update
+#  false = skip
+#  true  = enable updates to the alpha buffer with this polygon
+
+# prim.mLineSize
+# +0FFF0000  00000000 = Line Width/Point Size
+#  n = 1/16 native pixel increments
+
+# prim.mZCompLoc
+# +00002000  00000000 = Z Compare Location
+#  false = z buffer compares after texturing (slower, handles alpha correctly for textures)
+#  true  = z buffer compares before texturing (faster, may cause issues for textures)
+
+# prim.mZCompare
+# +00001000  00000000 = Z Buffer Compare
+#  false = z buffer is ignored by this polygon
+#  true  = z buffer enables compare
+
+# prim.mZBuffer
+# +00000800  00000000 = Z Buffer Update
+#  false = z buffer is unchanged by this polygon
+#  true  = z buffer enables update
+
+# prim.mZLogic
+# +00000700  00000000 = Z Buffer Comparison Logic
+#  +4 = greater than
+#  +2 = equal to
+#  +1 = less than
+
+# prim.mPrimType
+# +00000007  00000000 = Primitive Type
+#  0 = quads
+#  1 = --
+#  2 = triangles
+#  3 = trianglestrip
+#  4 = trianglefan
+#  5 = lines
+#  6 = linestrip
+#  7 = points
+
+# prim.mFixPoint
+# +00000000  FF000000 = Use Fixed Points for Position Input
+#  +80 = enable fixed points (small integer data type with a fractional mantissa)
+#  +40 = use 16-bit integers instead of 8-bit integers (includes mantissa)
+#  +20 = use signed integers instead of unsigned integers
+#  +1F = mantissa bit size (abstract; can be larger than actual bit size)
+
+# prim.mOtherMTX
+# +00000000  00800000 = Use Custom MTX (input in r8)
+# false = use current CObj mtx
+# true  = interpret r8 as either a CObj, a JObj, or a MTX
+
+# prim.mNoZCoord
+# +00000000  00200000 = Omit Z coord in Position input
+#  false = XYZ are read as part of input position coordinates
+#  true  = only XY are read as part of input coordinates
+
+# prim.mNoAChan
+# +00000000  00100000 = Omit Alpha channel in Color input
+#  false = input color includes an alpha channel
+#  true  = input color does not have an alpha channel
+
+# prim.mRGBComp
+# +00000000 00080000 = Enable Compressed Color Data Format (bool)
+#  false = default to uncompressed RGBA
+#  true  = use `mRGBType` to specify a custom format type
+
+# prim.mRGBType
+# +00000000  00070000 = Color Data Format
+#  0 = RGB565  (16-bit) compressed RGB
+#  1 = RGB8    (24-bit) Full RGB (no padding)
+#  2 = RGBX8   (32-bit) Full RGB aligned for RGBA
+#  3 = RGBA4   (16-bit) very compressed RGBA
+#  4 = RGBA6   (24-bit) compressed RGBA
+#  5 = RGBA8   (32-bit) Full RGBA
+
+# prim.mBMode
+# +00000000  00003000 = Blend Type
+#  0 = None
+#  1 = Blend -- blend using blending equation
+#  2 = Logic -- blend using bitwise operation
+#  3 = Subtract -- input subtracts from existing pixel
+
+# prim.mBMSource
+# +00000000  00000700 = Blend Source (TEV+Fog)
+#  0 = zero -- 0.0
+#  1 = one  -- 1.0
+#  2 = source color
+#  3 = inverted source color
+#  4 = source alpha
+#  5 = inverted source alpha
+#  6 = destination alpha
+#  7 = inverted destination alpha
+
+# prim.mBMDest
+# +00000000  00000070 = Blend Dest (Environmental Frame Buffer)
+#  0 = zero -- 0.0
+#  1 = one  -- 1.0
+#  2 = source color
+#  3 = inverted source color
+#  4 = source alpha
+#  5 = inverted source alpha
+#  6 = destination alpha
+#  7 = inverted destination alpha
+
+# prim.mBMLogic
+# +00000000  0000000F = Blend Logic
+#  0 -- CLEAR;   dst = 0
+#  1 -- AND;     dst = src & dst
+#  2 -- REVAND;  dst = src & ~dst
+#  3 -- COPY;    dst = src
+#  4 -- INVAND;  dst = ~src & dst
+#  5 -- NOOP;    dst = dst
+#  6 -- XOR;     dst = src ^ dst
+#  7 -- OR;      dst = src | dst
+#  8 -- NOR;     dst = ~(src | dst)
+#  9 -- EQUIV;   dst = ~(src ^ dst)
+#  A -- INV;     dst = ~dst
+#  B -- REVOR;   dst = src | ~dst
+#  C -- INVCOPY; dst = ~src
+#  D -- INVOR;   dst = ~src | dst
+#  E -- NAND;    dst = ~(src & dst)
+#  F -- SET;     dst = 1
+
+
+
+Partially implemented features:
+# --- m*Indexed* features will work, but only for first index
+# - future versions will allow you to select from 256 or 65536 indices
+
+# prim.mCIndexed
+# +00000080  00000000 = Set Indexed Colors (from r6)
+#  false = r6 is ignored; colors are input with the vertex directly from gx fifo
+#  true  = r6 specifies the base of an array of vertex colors
+#  - inidexed colors are fed to GX using an ID instead of an actual color
+
+# prim.mCIndex16
+# +00000040  00000000 = Indexed Colors are 16-bit
+#  false = Color IDs are bytes
+#  true  = Color IDs are hwords
+
+# prim.mPIndexed
+# +00000020  00000000 = Set Indexed Position Coords (from r7)
+#  false = position coordinates are input with the vertex directly from fifo
+#  true  = r7 specifies the base of an array of vertex position coordinates
+#  - indexed positions are fed to GX using an ID instead of an actual set of coordinates
+
+# prim.mPIndex16
+# +00000010  00000000 = Indexed Position Coords are 16-bit
+#  false = Position IDs are bytes
+#  true  = Position IDs are hwords
+
+# prim.mIRecache
+# +00000008  00000000 = Indexed Data needs re-cache
+#  false = read-only vertex data is read without the need for flushing and waiting for ppcsync
+#  true  = flushes DC at array regions to prevent incoherence between CPU and GPU cache
+#  - only required for indexed variables -- GPU can't read pending I/O from the CPU outside of fifo
+
+# prim.mOneColor
+# +00000000  00400000 = Use Constant Color (input in r9)
+# false = r9 is ignored; colors are read for each individual vertex
+# true  = r9 specifies a color to use for all vertices in this polygon
+[Punkline]
+<prim.close> NTSC 1.02
+# Close the current set of drawing params
+3860FFFF
+b 0x80361fc4
+
+
+
+<prim.new> NTSC 1.02
+7C0802A6 9421FFF0 90010014
+bl <prim.set>
+3860FFFF
+bl <prim.start>
+80010014 38210010 7C0803A6 4E800020
+
+
+
+<prim.start> NTSC 1.02
+# Start drawing verts using current params
+3880FFFF 38A0FFFF
+b <prim.__start>
+
+<prim.quads> NTSC 1.02
+# Variations allow override of primitive type
+38800000
+b <prim.__start>
+<prim.triangles> NTSC 1.02
+38800002
+b <prim.__start>
+<prim.trianglestrip> NTSC 1.02
+38800003
+b <prim.__start>
+<prim.trianglefan> NTSC 1.02
+38800004
+b <prim.__start>
+<prim.lines> NTSC 1.02
+38800005
+38A0FFFF
+b <prim.__start>
+<prim.linestrip> NTSC 1.02
+38800006 38A0FFFF
+b <prim.__start>
+<prim.points> NTSC 1.02
+38800007 38A0FFFF
+b <prim.__start>
+
+<prim.lines_width> NTSC 1.02
+# Variations include a line/point width/size argument
+7C852378 38800005
+b <prim.__start>
+<prim.linestrip_width> NTSC 1.02
+7C852378 38800006
+b <prim.__start>
+<prim.points_width> NTSC 1.02
+7C852378 38800007
+b <prim.__start>
+
+<prim.__start> NTSC 1.02
+# r3 = number of verts
+# r4 = primitive type
+# r5 = width argument (for line or point primitive types)
+7C0802A6 9421FFE0 90010024 BFA10010
+lis r31, <<prim.__set_memory>>@h
+ori r31, r31, <<prim.__set_memory>>@l
+7C7E1B79 40A00008 83DF0018 7C9D2379 93DF0018 801F0000 40A00008 541D077E 2C1D0005 41A00028 7CA32B79 40A00008 5403853E 2C1D0007 38800000 41A2000C
+bl <GX.setLineWidth>
+48000008
+bl <GX.setPointSize>
+57A31EB8 38800000 38630080 7FC5F378
+bl <GX.begin>
+3C60CC01 38638000 BBA10010 80010024 38210020 7C0803A6 4E800020
+
+<prim.__set_memory> NTSC 1.02
+# This is static memory reserved for storing the last used draw settings
+00101303 00001455                    # 0x00 : Params memory
+00000000 00000000 00000000 FF0000FF  # 0x08 : Option arg memory
+00000000                             # 0x18 : Vert count memory
+00101303 00001455                    # 0x1C : Default params
+
+<prim.reset_mem> NTSC 1.02
+# Reset params memory to default values
+38600000
+b <prim.__reset_mem>
+
+<prim.reset_params> NTSC 1.02
+# Reset params to defaults, and then set them
+38600001
+b <prim.__reset_mem>
+
+<prim.__reset_mem> NTSC 1.02
+2C030000
+lis r3, <<prim.__set_memory>>@h
+ori r3, r3, <<prim.__set_memory>>@l
+8003001C 90030000 80030020 90030004 38000000 90030008 9003000C 90030010 90030014 90030018 4D820020 3860FFFF
+b <prim.set>
+
+
+<prim.set> NTSC 1.02
+# Set GX params for next draw (without committing to draw)
+# r3 = list of params
+# Params:
+#   0x0  = 64bit (rParamsH, rParamsL)
+#   0x8  = Optional Color Index Pointer
+#   0xC  = Optional Polygon Index Pointer
+#   0x10 = Optional Camera Mtx Pointer
+#   0x14 = Optional Single Color RGBA
+
+# Alternative syntax:
+# r3 = vert count
+# r4...r9 = params
+
+# Alternative syntax:
+# r3 = -1 (use previous params)
+#   - if no params have been used yet, then default params are used
+7C0802A6 9421FF90 90010074 7C000026 90010030 BE810034 2C03FFFF 7C791B78 3AE10010
+lis r20, <<prim.__set_memory>>@h
+ori r20, r20, <<prim.__set_memory>>@l
+41800014 7E99A378 4182000C 90790018 7C99C5AA BB590000 BF540000 57401FFE 68030001
+bl <GX.setColorUpdate>
+574327FE
+bl <GX.setAlphaUpdate>
+5763A7BE 5764C77E 5765E77E 5766073E
+bl <GX.setBlendMode>
+38600004 38800000 38A00000 38C00004 38E00000
+bl <GX.setAlphaCompare>
+5743A7FE 5744C77E 5745AFFE
+bl <GX.setZMode>
+57439FFE
+bl <GX.setZCompLoc>
+38600000
+bl <GX.setNumTexGens>
+38600001
+bl <GX.setNumTevStages>
+38600000 388000FF 38A000FF 38C00004
+bl <GX.setTevOrder>
+38600000 38800004
+bl <GX.setTevOp>
+38600001
+bl <GX.setNumChans>
+38600004 38800000 38A00000 38C00001 38E00000 39000000 39200002
+bl <GX.setChanCtrl>
+574317BE
+bl <GX.setCullMode>
+bl <GX.clearVtxDesc>
+5778463E 38600000 5700CFFF 38C00004 38E00000 3AA00004 38800009 41A20014 5706DFBE 38000001 570706FE 7C153030 57655FFF 56A0083C 68A50001 40A20008 1C150003 7C150378
+bl <GX.setVtxAttrFmt>
+38600000 3880000B 57606FFF 576067FE 38C00005 38E00000 68050001 3AC00000 41A20010 5766877E 54D6F87E 3AD60002 68050001
+bl <GX.setVtxAttrFmt>
+5740DFFF 38600009 38800001 7C7745AA 41A20050 38800002 5740E7FF 41A20008 38800003 90970004 7FA3EB79 40800034 5740EFFF 3804FFFF 54041838 38000001 7C042030 7C9521D6 41A20008
+bl <data.flush_DC>
+38600009 7FA4EB78 7EA5AB78
+bl <GX.setArray>
+7C7744AA
+bl <GX.setVtxDesc>
+576057FF 3860000B 38800001 4182000C 38800000 4800005C 5740CFFF 7C7745AA 41A20050 38800002 5740D7FF 41A20008 38800003 90970004 7F83E379 40800034 5740EFFF 3804FFFF 54041838 38000001 7C042030 7C9621D6 41A20008
+bl <data.flush_DC>
+3860000B 7F84E378 7EC5B378
+bl <GX.setArray>
+7C7744AA
+bl <GX.setVtxDesc>
+57604FFF 7FC3F378 40820008
+bl <CObj.getCurrent>
+2C03FFFF 41A00038 41820028 808DC184 80840100 3463FFFF 41A00020 80040008 2C000000 41820014 7C040378 4BFFFFE8 806DB780 48000008 80640028 3C808040 60846220 3CA08040 60A56708 80030000 7C002000 40A20008 38630054 7C002800 40A20008 38630044 38800000
+bl <GX.loadPosMtxImm>
+38600000
+bl <GX.setCurrentMtx>
+BA810034 80010030 7C0FF120 80010074 38210070 7C0803A6 4E800020

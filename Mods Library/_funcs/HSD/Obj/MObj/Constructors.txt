@@ -1,0 +1,10 @@
+-==-
+MObj Constructors
+
+MObj.loadDesc
+args: rMObjDesc
+<- rMObj
+
+[HSD]
+<MObj.loadDesc> NTSC 1.02
+b 0x803631e4

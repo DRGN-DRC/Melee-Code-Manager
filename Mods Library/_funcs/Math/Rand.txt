@@ -1,0 +1,84 @@
+-==-
+
+Random Number Generators
+
+rand.int  # return random 32-bit integer
+<-- rRand
+
+rand.max_int  # random int between 0 and 'rMax'
+args: rMax
+<-- rRand
+
+rand.float  # random percent between 0.0 and 1.0
+<-- fRand
+
+rand.max_float  # random float between 0 and 'fMax'
+args: fMax
+<-- fRand
+
+rand.fill  # fill target with random bits for 'rSize' bytes
+args: rOut, rSize
+<-- rOut
+
+[?, Punkline]
+
+
+<rand> NTSC 1.02
+# Produce a random 32-bit integer
+# --- returns:
+# r3 = rRand
+b 0x803804f8
+
+
+
+<rand.float> NTSC 1.02
+# Produce a random float between 0.0 and 1.0
+# --- returns:
+# f1 = fRand
+b 0x80380528
+
+
+
+<rand.max_int> NTSC 1.02
+# Produces a random integer between 0 and the given number
+# --- args:
+# r3 = rMax
+
+# --- returns:
+# r3 = rRand
+b 0x80380580
+
+<rand.max_int> NTSC 1.02
+# Produces a random integer between 0 and the given number
+# --- args:
+# r3 = rMax
+
+# --- returns:
+# r3 = rRand
+b 0x80380580
+
+<rand.max_float> NTSC 1.02
+# Produces a random float between 0 and the given number
+# --- args:
+# f1 = fMax
+
+# --- returns:
+# f1 = fRand
+7C0802A6 9421FFE0 90010024 D0210010
+bl <rand.float>
+C0010010 EC210032 80010024 38210020 7C0803A6 4E800020
+
+
+
+
+<rand.fill> NTSC 1.02
+# Fill n bytes with random bits at target location
+# --- args:
+# r3 = rOut
+# r4 = rSize
+
+# --- returns
+# r3 = rOut
+7C0802A6 9421FFE0 90010024 BFA10010 7C7E1B78 3BE3FFFE 7C9D2379 40810028 3C600002 3863FFFF
+bl <rand.max_int>
+37BDFFFE 41800010 B47F0002 4181FFE8 48000008 987F0002 7FC3F378 BBA10010 80010024 38210020 7C0803A6 4E800020

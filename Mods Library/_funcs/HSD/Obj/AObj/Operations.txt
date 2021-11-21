@@ -1,0 +1,17 @@
+-==-
+AObj Operations
+
+Methods:
+
+AObj.setRate
+# Sets the animation frame rate of an AObj
+  args: rAObj, fRate
+
+[HSD]
+<AObj.setRate> NTSC 1.02
+# Sets the animation frame rate of an AObj
+
+# --- args:
+# r3 = AObj
+# f1 = Anim Frame Rate
+b 0x8036530c

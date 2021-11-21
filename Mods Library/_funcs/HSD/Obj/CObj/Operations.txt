@@ -1,0 +1,10 @@
+-==-
+
+CObj Operations
+
+CObj.getCurrent
+<- rCObj
+
+[HSD]
+<CObj.getCurrent> NTSC 1.02
+b 0x8036a288

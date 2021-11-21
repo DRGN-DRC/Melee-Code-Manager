@@ -1,0 +1,79 @@
+Default Symbols Dictionary
+This symbols dictionary is used by arch.init to define all default "init.*" symbols and symbol handlers
+- implements "init.flush", "init.static", and "init.call" by default
+- see symbols tab for more info
+[Punkline]
+
+<arch.dict.init_default_events> NTSC 1.02
+00000003
+.long <<arch.init.event.flush>>
+.long <<arch.init.event.static>>
+.long <<arch.init.event.call>>
+
+
+
+
+-==-
+
+Archive "init.flush" handler
+
+Adding an "init.flush" symbol to your DAT file will cause this event to trigger on <arch.init>
+
+'.flush' allows you to specify regions of the file that have instructions
+- the CPU may crash if reading new instruction data with mismatching cache data
+ - this flush allows the instruction cache to be synced after new instructions are loaded
+
+The file region for this symbol must begin with the following structure:
+0x0 = number of regions to flush
+0x4 = start of array of 8-byte pointer/size elements
+    0x0 = point to start of flush region
+    0x4 = specify number of bytes to flush
+- each region will have the instruction cache use updated instructions on next execution
+[Punkline]
+<arch.init.event.flush> NTSC 1.02
+48000010 696E6974 2E666C75 73680000 7C0802A6 9421FFE0 90010024 BFC10010 83CA0000 3BEAFFFC 37DEFFFF 41800018 809F0004 847F0008 7C841850
+bl <data.flush_IC>
+4BFFFFE8 BBC10010 80010024 38210020 7C0803A6 4E800020
+
+
+-==-
+
+Archive "init.call" handler
+
+Adding an "init.call" symbol to your DAT file will cause this event to trigger on <arch.init>
+
+'.call' allows you to specify callback(s) to execute after the file has synced/initialized
+
+The file region for this symbol must begin with the following structure:
+ 0x0 = number of callback pointers
+ 0x4 = start of array of 4-byte pointer elements
+     0x0 = point to callback (in file) to be executed
+- each listed callback pointer must be given an entry in the file's relocation table
+- all parts of the file to be called should also be defined with "init.flush"
+- each callback will be executed (in the order listed) right after the archive object is created
+- each callback recieves arguments r3=Archive Object,  r4=Address of Self (callback)
+- after table finishes execution, the table's count param is updated to prevent re-execution
+[Punkline]
+<arch.init.event.call> NTSC 1.02
+48000010 696E6974 2E63616C 6C000000 7C0802A6 9421FFE0 90010024 BFA10010 7D7F5B78 7D5E5378 83BE0000 2C1D0000 4081002C 7C1D00D0 93BE0000 37BDFFFF 4180001C 849E0004 2C040000 7C8803A6 7FE3FB78 4DA00021 4BFFFFE4 BBA10010 80010024 38210020 7C0803A6 4E800020
+
+
+-==-
+Archive "init.static" handler
+
+Adding an "init.static" symbol to your DAT file will cause this event to trigger on <arch.init>
+
+'.static' allows you to specify a static RAM address to create a pointer  that points to a place in the file
+- these pointers may be used by the rest of the game environment without knowledge of the file or its archive object
+
+The file region for this symbol must begin with the following structure:
+0x0 = number of static region pointers to create
+0x4 = start of array of 0x8-byte link elements
+    0x0 = pointer to static RAM addresss (not relocated, out of file)
+    0x4 = pointer to file offset (relocated, inside of file)
+- each specified RAM address will have the relocated file pointer written to its location
+- when pointing to dynamic files this way, you will have to manage use of your static pointers accordingly
+[Punkline]
+
+<arch.init.event.static> NTSC 1.02
+48000010 696E6974 2E737461 74696300 386AFFFC 808A0000 3484FFFF 4D800020 84A30008 80030004 90050000 4BFFFFEC

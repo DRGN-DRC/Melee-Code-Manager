@@ -30,13 +30,14 @@
       .macro \self\().mask,  va:vararg
         mut.call \self, mask, default, enum, , , \prefix, \suffix, \va
       .endm;.endif;
+  .endm;.macro enum.__enum_conc.mut.call,  self,  pfx,  sfx,  arg
+    mut.call \self, enum_parse_iter, default, enum, , , \pfx\arg\sfx, \pfx, \sfx, \arg
   .endm;enum.meth, enum_parse, enum_parse_iter, numerical, literal, count, step, mask
   .macro enum.mut.enum_conc.default,  self,  va:vararg;  ifalt;enum.ifalt = alt;.noaltmacro
     mut.call \self, enum_parse, default, enum, , , \va;ifalt.reset enum.ifalt
   .endm;.macro enum.mut.enum_parse.default,  self,  pfx,  sfx,  va:vararg
     .irp arg,  \va;  \self\().enum_exiting = 0
-      .ifnb \arg
-        mut.call \self, enum_parse_iter, default, enum, , , \pfx\arg\sfx, \pfx, \sfx, \arg
+      .ifnb \arg;  enum.__enum_conc.mut.call \self, \pfx, \sfx, \arg
         .if \self\().enum_exiting > 0
           \self\().enum_exiting = \self\().enum_exiting -1
           .if \self\().enum_exiting == 0;  .exitm;.endif;.endif;.endif;.endr;

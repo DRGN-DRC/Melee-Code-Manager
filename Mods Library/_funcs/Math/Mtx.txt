@@ -1,0 +1,397 @@
+-==-
+
+MTX Math Functions
+
+Matrix functions operate on matrix data from argument pointers rMtx*, rQuat*, and rVec*:
+
+
+3x4 Mtx (model-view transformation) functions:
+
+mtx.identity  # scale identity
+args: rMtx
+
+mtx.copy  # copy A -> B
+args: rMtxA, rMtxB
+
+mtx.conc  # write translation vector in rVec
+args: rMtx, rVec
+
+mtx.transpose  # transpose A -> B
+args: rMtxA, rMtxB
+
+mtx.inverse  # attempt inverse of A -> B; return success bool
+args: rMtxA, rMtxB
+<-- rSuccess
+
+
+mtx.trans  # translation mtx using XYZ args
+args: rMtx, fX, fY, fZ
+
+mtx.quat  # rotate MTX using quaternion in rQuat (1x4 vec)
+args: rMtx, rQuat
+
+mtx.lookat  # rotate to look at target, using camera params
+args: rMtx, rPos, rUpdir, rTarget
+
+mtx.inv_conc  # inverse concat of mtx A and B in C
+args: rMtxA, rMtxB, rMtxC
+
+mtx.inv_trans  # inverse translation of A in B
+args: rMtxA, rMtxB
+
+mtx.get_rot
+mtx.get_trans
+mtx.get_scale  # write to rVec from rMtx
+args: rMtx, rVec
+
+mtx.rot  # rotate from Euler angle XYZ in rVec
+args: rMtx, rVec
+
+mtx.rotrad_vec  # rotate XYZ using rVec weights and Radian scale
+args: rMtx, rVec, fRadians
+
+mtx.rotrad  # rotrad, but for 1 axis X(0), Y(1), Z(2)
+args: rMtx, rAxisID, fRadians
+
+mtx.rotrig  # input pre-calculated sin/cos args, for speed
+args: rMtx, rAxisID, fSin, fCos
+
+mtx.srt  # Scale Rotate and Translate rMtx with rVec params
+args: rMtx, rScale, rRot, rTrans, rOrigin
+# - all args besides rMtx are 1x3 vectors
+# - rOrigin can be null
+
+mtx.srt_quat  # srt -- but use quaternion rotation (1x4)
+args: rMtx, rScale, rQuat, rTrans, rOrigin
+
+mtx.add_scaled  # rMtxC = fScale * rMtxA + rMtxB
+args: rMtxA, rMtxB, rMtxC, fScale
+
+
+Quaternion functions:
+quat.slerp  # rotate rQuat C by interpolating from A and B
+args: rQuatA, rQuatB, rQuatC, fCoef
+
+
+Vector functions:
+vec.add  # rVec C = A + B
+vec.sub  # rVec C = A - B
+args: rVecA, rVecB, rVecC
+
+vec.scale  # rVec B = rVecA * fScale
+args: rVecA, rVecB, fScale
+
+vec.norm  # rVec B = A / mag(A)
+args: rVecA, rVecB
+
+vec.mag  # magnitude of rVec
+args: rVec, fMag
+
+vec.dot  # dot product of Vec A and B, returned in f1
+args: rVecA, rVecB
+<-- fProduct
+
+vec.cross  # cross product rVecC = rVecA x rVecC
+args: rVecA, rVecB, rVecC
+[MTX, HSD]
+
+
+
+
+# --- 3x4 TRANSFORMATION MATRIX FUNCS
+
+<mtx.identity> NTSC 1.02
+# Assigns scale identity to 3x4 matrix
+# --- args:
+# r3 = rMtx
+b 0x803421a4
+
+
+
+<mtx.copy> NTSC 1.02
+# Copies 3x4 matrix from A to B
+# --- args:
+# r3 = rMtxA
+# r4 = rMtxB
+b 0x803421d0
+
+
+
+<mtx.conc> NTSC 1.02
+# Returns Translation Vector
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+b 0x80342204
+
+
+
+<mtx.transpose> NTSC 1.02
+# Assigns transpose of mtx A to B
+# --- args:
+# r3 = rMtxA
+# r4 = rMtxB
+b 0x803422d0
+
+
+
+<mtx.inverse> NTSC 1.02
+# Attempts to assign inverse of A to B;  returning '1' if successful
+# --- args:
+# r3 = rMtxA
+# r4 = rMtxB
+
+# --- returns:
+# r3 = rSuccess
+b 0x80342320
+
+
+
+<mtx.trans> NTSC 1.02
+# Assigns a translation matrix using X, Y, and Z args
+# --- args:
+# r3 = rMtx
+# f1 = fX
+# f2 = fY
+# f3 = fZ
+b 0x80342634
+
+
+
+<mtx.scale> NTSC 1.02
+# Assigns scale XYZ to mtx
+# --- args:
+# r3 = rMtx
+# f1 = fX
+# f2 = fY
+# f3 = fZ
+b 0x80342668
+
+
+
+<mtx.quat> NTSC 1.02
+# Assigns rotation X, Y, and Z using given quaternion rQuat (1x4 mtx)
+# --- args:
+# r3 = rMtx
+# r4 = rQuat
+b 0x80342690
+
+
+
+<mtx.lookat> NTSC 1.02
+# Assigns rotation that looks at target, with camera params
+# --- args:
+# r3 = rMtx
+# r4 = rPos     - an X, Y, Z point in world-space
+# r5 = rUpdir   - an X, Y, Z vector (from rPos)
+# r6 = rTarget  - an X, Y, Z point in world-space
+b 0x80342734
+
+
+
+<mtx.inv_conc> NTSC 1.02
+# Returns inverse concatenation of mtx A and B in mtx C
+# --- args:
+# r3 = rMtxA
+# r4 = rMtxB
+# r5 = rMtxC
+b 0x80379598
+
+
+
+<mtx.inv_trans> NTSC 1.02
+# Returns inverse translation of mtx A in mtx B
+# --- args:
+# r3 = rMtxA
+# r4 = rMtxB
+b 0x80379a20
+
+
+
+<mtx.get_rot> NTSC 1.02
+# Returns rotation XYZ in vec
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+b 0x80379c24
+
+
+
+<mtx.get_trans> NTSC 1.02
+# Returns translation vec
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+b 0x80379f6c
+
+
+
+<mtx.get_scale> NTSC 1.02
+# Returns scale vec
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+b 0x80379f88
+
+
+
+<mtx.rot> NTSC 1.02
+# Rotate from vec
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+b 0x8037a120
+
+
+
+<mtx.rotrad_vec> NTSC 1.02
+# Assigns a rotation to X, Y, and Z using given VEC weights
+# --- args:
+# r3 = rMtx
+# r4 = rVec
+# f1 = fRadians
+b 0x80342530
+
+
+
+<mtx.rotrad> NTSC 1.02
+# Assigns a rotation to single axis X(0), Y(1), or Z(2)
+# Use rotrad to abstract away the trig functions, and calculate them internally
+# - radians is counter-clockwise
+# - 2Pi radians == 1 full rotation
+# --- args:
+# r3 = rMtx
+# r4 = rAxis
+# f1 = fRadians
+b 0x80342418
+
+
+
+<mtx.rotrig> NTSC 1.02
+# Assigns a rotation to a signle axis X(0), Y(1), or Z(2)
+# Use rotrig to handle the trig yourself, for precalculated args
+# --- args:
+# r3 = rMtx
+# r4 = rAxis
+# f1 = fSin
+# f2 = fCos
+b 0x80342488
+
+
+
+<mtx.srt> NTSC 1.02
+# Scale, Rotate, and Translate rMtx
+# --- args
+# r3 = rMtx
+# r4 = rScale vec
+# r5 = rRot vec
+# r6 = rTrans vec
+# r7 = rOrigin vec  - can be null
+b 0x8037a250
+
+
+
+<mtx.srt_quat> NTSC 1.02
+# Scale, Rotate and Translate rMtx (from quaternion)
+# --- args:
+# r3 = rMtx
+# r4 = rScale vec
+# r5 = rRot quat
+# r6 = rTrans vec
+# r7 = rOrigin vec  - can be null
+b 0x8037a43c
+
+
+
+<mtx.add_scaled> NTSC 1.02
+# Returns mtx C = fScale * mtx A + mtx B (fmadds)
+# r3 = rMtxA
+# r4 = rMtxB
+# r5 = rMtxC
+# f1 = fScale
+b 0x8037a54c
+
+
+
+# --- 1x4 QUATERNION FUNCS
+
+<quat.slerp> NTSC 1.02
+# Returns quat C using fCoef to SLerp between quat A and quat B
+# --- args:
+# r3 = rQuatA
+# r4 = rQuatB
+# r5 = rQuatC
+# f1 = fCoef
+b 0x8037ef28
+
+
+
+# --- 1x3 VECTOR FUNCS
+
+<vec.add> NTSC 1.02
+# Adds VecC = VecA + VecB
+# --- args:
+# r3 = rA
+# r4 = rB
+# r5 = rC
+b 0x80342d54
+
+
+
+<vec.sub> NTSC 1.02
+# Subtracts VecC = VecA + VecB
+# --- args:
+# r3 = rA
+# r4 = rB
+# r5 = rC
+b 0x80342d78
+
+
+
+<vec.scale> NTSC 1.02
+# Multiplies VecB = VecA * fScale
+# --- args:
+# r3 = rA
+# r4 = rB
+# f1 = fScale
+b 0x80342d9c
+
+
+
+<vec.norm> NTSC 1.02
+# Normalizes VecB = VecA / mag(VecA)
+# --- args:
+# r3 = rA
+# r4 = rB
+b 0x80342db8
+
+
+
+<vec.mag> NTSC 1.02
+# Returns Magnitude of Vec
+# --- args:
+# r3 = rVec
+# f1 = fMag
+b 0x80342dfc
+
+
+
+<vec.dot> NTSC 1.02
+# Returns the dot product of VecA and VecB in f1
+# --- args:
+# r3 = rA
+# r4 = rB
+
+# --- returns:
+# f1 = fProduct
+b 0x80342e38
+
+
+
+<vec.cross> NTSC 1.02
+# Returns VecC = cross product of VecA and VecB
+# --- args:
+# r3 = rA
+# r4 = rB
+# r5 = rC
+b 0x80342e58

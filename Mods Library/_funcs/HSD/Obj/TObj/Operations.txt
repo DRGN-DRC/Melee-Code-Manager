@@ -1,0 +1,88 @@
+-==-
+
+TObj Operations
+
+Methods:
+
+TObj.set_TexAnim
+# Assign a TexAnim directly to a TObj with custom starting frame and frame rate
+# - instantiates an AObj for this TObj, freeing any previously assigned AObjs before construction
+  args: rTObj, rTexAnim, fStart, fRate
+  <-- rTObj, rTexAnim, rAObj
+
+TObj.set_TexAnim_ints
+# Alternative syntax uses high/low param in r5 to replace floating point inputs
+  args: rTObj, rTexAnim, rParam
+  <-- rTObj, rTexAnim, rAObj
+  # rParam:
+  #  +FFFF0000 = anim starting frame (0xFFFF -- unsigned hword; 0-bit mantissa)
+  #  +0000FFFF = anim frame rate     (-0x7F.FF -- signed hword; 8-bit mantissa)
+
+
+TObj.addAnimAll
+# Assign a TexAnim directly to a TObj
+  args: rTObj, rTexAnim
+  # - instantiates an AObj for this TObj, freeing any previously assigned AObjs before construction
+
+TObj.reqAnimAll
+# Flags a TObj for animation, and sets a starting frame
+  args: rTObj, fStart
+[HSD, Punkline]
+
+<TObj.addAnimAll> NTSC 1.02
+# Assign a TexAnim directly to a TObj
+# - instantiates an AObj for this TObj, freeing any previously assigned AObjs before construction
+
+# --- args:
+  # r3 = TObj
+  # r4 = TexAnim
+b 0x8035e708
+
+<TObj.reqAnimAll> NTSC 1.02
+# Flags a TObj for animation, and sets a starting frame
+
+# --- args:
+# r3 = TObj
+# f1 = Anim Starting Frame
+b 0x8035e800
+
+
+# --- custom functions
+<TObj.set_TexAnim> NTSC 1.02
+# Assign a TexAnim directly to a TObj, with input ReqAnim and AObjRate float values
+# - instantiates an AObj for this TObj, freeing any previously assigned AObjs before construction
+
+# --- args:
+# r3 = TObj
+# r4 = TexAnim (links a TObj to an AObjDesc)
+# f1 = Anim Starting Frame
+# f2 = Anim Frame Rate
+
+# --- returns:
+# r3 = TObj (as given)
+# r4 = TexAnim (as given)
+# r5 = AObj (for this TObj)
+7C0802A6 9421FFD0 90010034 BFA10010 DBE10020 DBC10028 7C7F1B78 FFE00890 7C9E2378 FFC01090
+bl <TObj.addAnimAll>
+7FE3FB78 FC20F890 83BF0064
+bl <TObj.reqAnimAll>
+7FA3EB78 FC20F090
+bl <AObj.setRate>
+7FE3FB78 7FC4F378 7FA5EB78 CBE10020 CBC10028 BBA10010 80010034 38210030 7C0803A6 4E800020
+
+
+<TObj.set_TexAnim_ints> NTSC 1.02
+# Alternative version of set_TexAnim that uses integer inputs instead of floats:
+# --- args:
+# r3 = TObj
+# r4 = TexAnim
+# r5 = Params:
+#      +FFFF0000 = anim starting frame (0xFFFF -- unsigned hword; 0-bit mantissa)
+#      +0000FFFF = anim frame rate     (-0x7F.FF -- signed hword; 8-bit mantissa)
+
+# --- returns:
+# r3 = TObj (as given)
+# r4 = TexAnim (as given)
+# r5 = AObj (for this TObj)
+9421FFF0 90A10008 3C000804 7CB7E2A6 E021C008 7C17E3A6 E041F00A 7CB7E3A6 38210010
+b <TObj.set_TexAnim>

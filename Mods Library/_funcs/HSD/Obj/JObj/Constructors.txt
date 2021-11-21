@@ -1,0 +1,16 @@
+-==-
+JObj Constructors
+
+JObj.loadDesc
+args: rJObjDesc
+<- rJObj
+
+RObj.loadDesc
+args: rRObjDesc
+<- rRObj
+
+[HSD]
+<JObj.loadDesc> NTSC 1.02
+b 0x80370bec
+<RObj.loadDesc> NTSC 1.02
+b 0x8037c1ec

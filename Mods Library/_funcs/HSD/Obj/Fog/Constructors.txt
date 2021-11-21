@@ -1,0 +1,16 @@
+-==-
+Fog Constructors
+
+Fog.loadDesc
+args: rFogDesc
+<- rFog
+
+FogAdj.loadDesc
+args: rFogAdjDesc
+<- rFogAdj
+
+[HSD]
+<Fog.loadDesc> NTSC 1.02
+b 0x8037dc38
+<FogAdj.loadDesc> NTSC 1.02
+b 0x8037dd58

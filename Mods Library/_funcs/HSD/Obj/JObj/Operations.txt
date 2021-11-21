@@ -1,0 +1,135 @@
+-==-
+
+JObj Operations
+
+Methods:
+JObj.select
+# Select the Nth JObj from a skeleton using a bone in its joint family
+  args: rJObj, rID
+  <-- rIndexedJObj
+  # - child/sibling tree is flattened into linear index
+  # - children are counted before siblings
+
+JObj.set_AnimJoint
+# Assign Joint and/or Texture animation constructions to an existing JObj skeleton
+# Also assigns a starting frame for animation
+  args: rJObj, rAnimJoint, rTexAnim, rShapeAnim, rID, fStart
+  <-- rJObj
+  # - anim descriptors may be null pointers, to skip construction
+  # - anim descriptors may be given as a list of pointers to tree roots
+  #   - this will be implied if rID is 0+, causing an anim to be selected
+  #   - if rID == -1, then anim descriptors are used as given
+
+JObj.set_AnimJoint_ints
+# Alternative input syntax for .set_AnimJoint uses low/high r7 param instead of floating point
+  args: rJObj, rAnimJoint, rTexAnim, rShapeAnim, rParam
+  <-- rJObj
+  # rParam:
+  #  +FFFF0000 = anim starting frame (0xFFFF -- unsigned hword; 0-bit mantissa)
+  #  +0000FFFF = Selection index     (0xFFFF -- unsigned hword; 0-bit mantissa)
+
+JObj.check_DirtySub
+# Flags JObj matrix for animation transform updates, if necessary
+  args: rJObj
+
+
+
+JObj.addAnimAll
+# Assign Joint and Texture animation constructor trees to an existing JObj skeleton
+  args: rJObj, rAnimJoint, rTexAnim, rShapeAnim
+  # - each arg is the root of a tree of assets
+  # - each arg (besides the JObj) may be null to skip
+
+JObj.reqAnimAll
+# Flags a JObj (skeleton) for animation, and sets a starting frame
+  args: rJObj, rAnimJoint, fStart
+
+JObj.setMtxDirtySub
+# Used to apply iterative frame-wise transformation to joints based on animations
+  args: rJObj
+
+[HSD, Punkline]
+<JObj.addAnimAll> NTSC 1.02
+# Assign Joint and Texture animation constructor trees to an existing JObj skeleton
+# --- args:
+# r3 = JObj tree
+# r4 = AnimJoint tree
+# r5 = TexAnim tree
+# r6 = ShapeAnim tree
+# - each may be null, to skip construction
+b 0x8036fb5c
+
+<JObj.reqAnimAll> NTSC 1.02
+# Flags a JObj for animation and sets a starting frame
+
+# --- args:
+# r3 = JObj root
+# r4 = AnimJoint root
+# f1 = starting frame
+
+b 0x8036f8bc
+
+<JObj.setMtxDirtySub> NTSC 1.02
+# Used to apply iterative frame-wise transformations to joints based on animations
+# r3 = JObj
+b 0x803732E8
+
+
+
+<JObj.select> NTSC 1.02
+# Select the Nth JObj from a skeleton using any bone in its joint family
+# r3 = root JObj (or member of family)
+# r4 = ID to select
+7C0802A6 9421FFD0 90010034 7C651B78 2C050000 40800010 7CA32B78 80A3000C 4BFFFFF0 7C852378 38810010 38C0FFFF 4CC63102
+bl 0x80011e24
+80610010 80010034 38210030 7C0803A6 4E800020
+
+
+
+<JObj.set_AnimJoint> NTSC 1.02
+# Assign Joint and Texture animation constructor trees to an existing JObj skeleton
+# --- args:
+# r3 = JObj root
+# r4 = AnimJoint (or AnimJointList)
+# r5 = TexAnim (or TexAnimList)
+# r6 = ShapeAnim (or ShapeAnimList)
+# r7 = Selection Index
+#      - if ID is 0+, then the nth pointer from lists given in r4, r5, r6 will be used
+#      - else r4, r5, r6 will be used directly
+#      - r4, r5, r6 may be null, to skip them
+# f1 = Starting Frame (for AnimJoint)
+
+# --- returns:
+# r3 = JObj root
+7C0802A6 9421FFE0 90010024 BFC10010 DBE10018 7C9E2379 FFE00890 7C7F1B78 4180002C 57C0103A 2C040000 41820008 7C84002E 2C050000 41820008 7CA5002E 2C060000 41820008 7CC6002E
+bl <JObj.addAnimAll>
+7FE3FB78 FC20F890
+bl <JObj.reqAnimAll>
+7FE3FB78 CBE10018 BBC10010 80010024 38210020 7C0803A6 4E800020
+
+
+
+<JObj.set_AnimJoint_ints> NTSC 1.02
+# alternative to set_animJoint uses high in r7 to specify starting frame as integer
+
+# --- args:
+# r3 = JObj root
+# r4 = AnimJoint (or AnimJointList)
+# r5 = TexAnim (or TexAnimList)
+# r6 = ShapeAnim (or ShapeAnimList)
+# r7 = Params:
+#      +FFFF0000 = anim starting frame (0xFFFF -- unsigned hword; 0-bit mantissa)
+#      +0000FFFF = Selection index     (0xFFFF -- unsigned hword; 0-bit mantissa)
+#      - if ID is 0+, then the nth pointer from lists given in r4, r5, r6 will be used
+#      - else r4, r5, r6 will be used directly
+#      - r4, r5, r6 may be null, to skip them
+
+# --- returns:
+# r3 = JObj root
+9421FFF0 90E10008 E021C008 38210010
+b <JObj.set_AnimJoint>
+
+
+<JObj.check_DirtySub> NTSC 1.02
+80030014 5400018D 4C820020 54000211 4082000C 54000673 4C820020
+b <JObj.setMtxDirtySub>

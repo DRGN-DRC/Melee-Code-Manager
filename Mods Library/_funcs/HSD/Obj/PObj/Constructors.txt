@@ -1,0 +1,10 @@
+-==-
+PObj Constructors
+
+PObj.loadDesc
+args: rPObjDesc
+<- rPObj
+
+[HSD]
+<PObj.loadDesc> NTSC 1.02
+b 0x8036be64

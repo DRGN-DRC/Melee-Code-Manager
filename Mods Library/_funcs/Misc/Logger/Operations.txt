@@ -1,0 +1,122 @@
+-==-
+
+Dolphin Logger Functions
+
+log.print  # print ascii to Dolphin Log 'OSReport' output
+args: rString, rArg1, rArg2, rArg3 ...
+# - printed lines are formatted with the following escapes
+#   - FPRS:  %f = float,  %e = exponent
+#   - GPRS:  %s = str,  %x = hex,  %d, %i = signed decimal
+#   - GPRS:  %u = unsigned decimal,  %\x23\ x = prefixed hex
+#   - GPRS:  %\x23\ 04x = 4-digits of hex, including prefix
+# - printed lines must be 1024 chars or less
+# - printed lines will flood stdout and obfuscate error messages
+
+log.nl  # Print a null message to give appearence of newline
+
+log.timestamp  # returns details about current frame/time
+returns: rScene, rRel, rBoot, rID, rTrans, rMajor, rMinor, rTBU, rTBL, fScene, fRel, fBoot
+# takes no args, and returns the following identifying timestamp data:
+# --- Retrns:
+# f1 = Scene frame
+#    - integer index counter -- not a real timer
+#      - index counts up once before the GProc, GXDraw steps in a scene frame execute
+#      - updated as part of the HSD Performance stat routine implemented in the scene loop
+# f2 = Relative frame
+#    - using HSD Performance stat timestamps
+#      - f2 is the real time relative to the start of the counted frame in f1
+#      - very accurate -- should maintain precision of 20-nanosecond increments
+# f3 = Boot frame
+#    - using OS boot timestamp to create a sample runtime frame timestamp
+
+# r3 = Scene frame
+# r4 = Relative frame (in microframes)
+#    + FFF00000 = full frames
+#    + 000FFFFF = microframes
+#    - microframes count in-between frames, relative to the performance monitor timestamps
+#    - full frames will be <1 unless something is causing the scene frame ticks to stall:
+#      - >1 when the GProc or GXDraw step of a scene takes too long
+#      - >1 when the CPU is stalling while waiting for hardware to sync
+# r5 = Boot frame
+
+# r6 = compressed ID: [r7, r8, r9]
+#    - r6 is convenient for implementing into timestamp messages if individual IDs are not needed
+# r7 = Scene Transition Count
+# r8 = Major Scene ID
+# r9 = Minor Scene ID
+# r10, r11 = raw TBU, TBL
+#          - r10, r11 make a timestamp counting from epoch in jan 2000 -- unnormalized
+
+[Punkline]
+# --- generic tools:
+
+<log.print> NTSC 1.02
+# This logs a formatted print message in the Dolphin logger, and can use floating point args
+# - log messages will flood EXI buffer with ascii, obfuscating some error outputs in the game
+
+# --- args:
+# r3 = address of format string
+# - string MUST begin with a space, and may include escapes for inserting formatted arguments
+#   - FPR escapes:  %f = float,  %e = exponent
+#   - GPR escapes:  %s = str,  %x = hex,  %d, %i = signed decimal,  %u = unsigned decimal
+#   - %\x23\ x  -- this format makes hex with a prefix '0x'
+#   -
+# r4...r10 = GPR arguments
+# f1...f8  = FPR arguments
+# - these will be fed into the escapes found in the format string, as needed
+4CC63342
+b 0x80323eb4
+
+
+
+<log.nl>
+# Prints a null message to give the appearence of a newline without emitting one
+7C0802A6 9421FFE0 90010024 38000000 90010010 38610010
+bl <log.print>
+80010024 38210020 7C0803A6 4E800020
+
+
+<log.timestamp> NTSC 1.02
+# takes no args, and returns the following identifying timestamp data:
+# --- Retrns:
+# f1 = Scene frame
+#    - integer index counter -- not a real timer
+#      - index counts up once before the GProc, GXDraw steps in a scene frame execute
+#      - updated as part of the HSD Performance stat routine implemented in the scene loop
+# f2 = Relative frame
+#    - using HSD Performance stat timestamps
+#      - f2 is the real time relative to the start of the counted frame in f1
+#      - very accurate -- should maintain precision of 20-nanosecond increments
+# f3 = Boot frame
+#    - using OS boot timestamp to create a sample runtime frame timestamp
+
+# r3 = Scene frame
+# r4 = Relative frame (in microframes)
+#    + FFF00000 = full frames
+#    + 000FFFFF = microframes
+#    - microframes count in-between frames, relative to the performance monitor timestamps
+#    - full frames will be <1 unless something is causing the scene frame ticks to stall:
+#      - >1 when the GProc or GXDraw step of a scene takes too long
+#      - >1 when the CPU is stalling while waiting for hardware to sync
+# r5 = Boot frame
+
+# r6 = compressed ID: [r7, r8, r9]
+#    - r6 is convenient for implementing into timestamp messages if individual IDs are not needed
+# r7 = Scene Transition Count
+# r8 = Major Scene ID
+# r9 = Minor Scene ID
+# r10, r11 = raw TBU, TBL
+#          - r10, r11 make a timestamp counting from epoch in jan 2000 -- unnormalized
+7D4D42E6 7D6C42E6 7C0D42E6 7C005000 40A2FFF0 7C0802A6 9421FFD0 90010034 DBE10020 3CE08000 80C700F8 3C008888 54C6F0BE 60008889 7C603016 3880FFFB
+bl <fixed_u32.float>
+FFE00890 806730D8 808730DC 7C845810 7C635110
+bl <s64.float>
+FC21F824 D021000C
+bl <float.u32>
+7C651B78 806DC058 2C030000 808DC05C 41820014 7C845810 7C635110
+bl <s64.float>
+FC21F824 D0210010 38600014
+bl <float.fixed_u32>
+90610014 3D008048 80689D5C
+bl <u32.float>
+80810014 C0410010 C061000C 3CE08043 89289D33 80E720CC 89089D30 54E6801E 5106442E 5126063E CBE10020 80010034 38210030 7C0803A6 4E800020

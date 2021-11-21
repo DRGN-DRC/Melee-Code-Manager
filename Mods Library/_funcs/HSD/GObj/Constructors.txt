@@ -1,0 +1,74 @@
+-==-
+GObj Constructors
+
+GObj.new
+args: rClass, rPLink, rPPriority
+<-- rGObj
+
+GObj.new_ordered  # rOrder 0 for incr, 1 for decr
+args: rOrder, rClass, rPLink, rPPriority, rPrevGObj
+<-- rGObj
+
+
+GDesc.load
+This is a special constructor designed to streamline creation of basic GObjs, with a flexible interface. An optional 'GDesc' (GObj Descriptor) struct may be given to represent some of the constructor arguments.
+
+The function takes 1 of 2 syntaxes:
+args: rGDesc
+args: rDataSize, rDestr, rGDesc
+<-- rGObj
+# if first arg is not an address, then longer syntax is used
+# rDestr is a custom callback to run when GObj data is freed
+# - a generic destructor is used if -1 is given
+# - destructor only executres if GObj or GObj data is explicitly destroyed
+
+GObj 'descriptors' ('GDescs') are only 0x10-bytes:
+GDesc.xGProc      = 0x0 # point or branch to GProc callback
+GDesc.xGXDraw     = 0x4 # point or branch to GXDraw callback
+GDesc.xSPriority  = 0x8 # Priority for GProc child list
+GDesc.xData       = 0x9 # 3-byte: Number of bytes for data
+GDesc.xPLink      = 0xC # GProc group link ID
+GDesc.xGXLink     = 0xD # GXDraw group link ID
+GDesc.xPPriority  = 0xE # Priority for GObj carrying GProc
+GDesc.xGXPriority = 0xF # Priority for GObj carrying GXDraw
+
+# Default class ID is 0x7FFF -- with data type of 0x7F
+# Data and procs are not generated if nulls are given
+[HSD, Punkline]
+
+<GObj.new> NTSC 1.02
+b 0x803901f0
+# args: rClass, rPLink, rPPriority
+# <-- rGObj
+
+<GObj.new_ordered> NTSC 1.02
+b 0x8038FFB8
+# args: rOrder, rClass, rPLink, rPPriority, rPrevGObj
+# <-- rGObj
+
+<GDesc.load> NTSC 1.02
+# Instantiate a GObj using a small 0x10-byte 'GDesc' struct
+# --- args:
+# r3 = Address of GDesc
+
+# --- alternative args:
+# r3 = custom data size
+# r4 = custom data destructor callback
+# r5 = address of GDesc
+# - if GDesc argument not a valid address, then a generic one is used
+
+# --- returns:
+# r3 = initialized GObj
+7C0802A6 9421FFD0 90010034 7C000026 90010010 BF210014 7C7B1B79 7C9C2378 7CBF2B78 40800008 7C7F1B78 3C008180 7E9F0000 41B40028 4800001C 4E800021 00000000 00000000 10000000 18131010 4E800020 4BFFFFE9 7FE802A6 40800010 837F0009 3B80FFFF 577BC23E 7C9C0000 4184000C 3F808037 639CF1B0 2D1B0000 7F3F44AA 572017BE 2F000001 40BA000C 573901FA 7F39FA14 574017BE 2F000001 40BA0010 575A01FA 7F5AFA14 3B5A0004 2D990000 2E1A0000 38607FFF 889F000C 88BF000E
+bl 0x803901f0
+7C7E1B78 40890034 7F63DB78
+bl 0x8037f1e4
+3880007F 7F85E379 7C661B78 7FC3F378 40A20008 38BF0010
+bl 0x80390B68
+807E002C 7F64DB78
+bl 0x8000c160
+408C0014 7FC3F378 7F24CB78 88BF0008
+bl 0x8038FD54
+40900018 7FC3F378 7F44D378 88BF000D 88DF000F
+bl 0x8039069C
+7FC3F378 BB210014 80010010 7C0FF120 80010034 38210030 7C0803A6 4E800020

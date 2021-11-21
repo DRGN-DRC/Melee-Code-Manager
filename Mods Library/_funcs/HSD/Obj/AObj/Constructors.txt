@@ -1,0 +1,16 @@
+-==-
+AObj Constructors
+
+AObj.loadDesc
+args: rAObjDesc
+<- rAObj
+
+FObj.loadDesc
+args: rFObjDesc
+<- rFObj
+
+[HSD]
+<AObj.loadDesc> NTSC 1.02
+b 0x8036439c
+<FObj.loadDesc> NTSC 1.02
+b 0x8036b73c

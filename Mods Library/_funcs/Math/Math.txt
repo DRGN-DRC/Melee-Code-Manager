@@ -1,0 +1,69 @@
+-==-
+
+Extra Math Functions
+
+rsqrt  # reciprocal square root  (1 / SQRT)
+args: fValue
+<-- rRSQRT
+
+sqrt  # square root (RSQRT * fValue)
+args: fValue
+<-- rSQRT
+
+
+ps_byte_lerp  # hw accelerated lerps between arrays of bytes
+args: rFloor, rCeil, rOut, rCount, fCoef
+<-- rFloor, rCeil, rOut, fCoef
+# - rFloor, rCeil, and rOut are base pointers to arrays
+# - rCount must be even, to work in pairs
+# - results are floored and capped without rounding
+
+color.lerp  # hw accelerated lerps between direct RGBA colors
+args: rFloor, rCeil, fCoef
+<-- rFloor, rCeil, rMixed, fCoef
+# - rFloor, rCeil, and rMixed are RGBA colors, not pointers
+# - results are rounded and capped
+
+[?, Punkline]
+
+<rsqrt> NTSC 1.02
+# Calculate reciprocal square root (1 / SQRT)
+# --- args:
+# f1 = fValue
+
+# --- returns:
+# f1 = fRSQRT
+b 0x80022df8
+
+
+
+<sqrt> NTSC 1.02
+# Calculate square root from <rsqrt> * fValue
+# --- args:
+# f1 = fValue
+
+# --- returns:
+# f1 = fSQRT
+7C0802A6 9421FFE0 90010024 D0210010
+bl <rsqrt>
+C0010010 EC210032 80010024 38210020 7C0803A6 4E800020
+
+
+
+
+
+<ps_byte_lerp> ALL
+# Fast Linear Interpolation between a pair of byte arrays
+# - all outputs are capped to unsigned byte range
+
+# --- args:
+# r3 = address of input A base (floor)
+# r4 = address of input B base (ceil)
+# r5 = address of output base
+# r6 = number of bytes (must be even)
+# f1 = interpolation percentage (floor...ceil)
+3C000804 7CF7E2A6 60000804 54C6003C 7C17E3A6 34C6FFFE 4180001C 1043338C 1064338C 10031028 1000105C 1003338E 4BFFFFE4 7CF7E3A6 4E800020
+
+
+<color.lerp> ALL
+7C0802A6 9421FFF0 90010014 3C003B00 90610010 90010010 7CD7E2A6 3C000804 C0810010 60000804 90810010 7C17E3A6 E0417010 E0617010 10031028 1042202A E0617012 1000105C E0417012 F0017010 10031028 1042202A 1000105C F0017012 80A10010 7CD7E3A6 80010014 38210010 7C0803A6 4E800020

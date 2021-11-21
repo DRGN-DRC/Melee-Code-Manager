@@ -1,0 +1,10 @@
+-==-
+DObj Constructors
+
+DObj.loadDesc
+args: rDObjDesc
+<- rDObj
+
+[HSD]
+<DObj.loadDesc> NTSC 1.02
+b 0x8035e1b4

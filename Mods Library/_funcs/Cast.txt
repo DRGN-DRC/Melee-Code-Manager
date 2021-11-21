@@ -1,0 +1,132 @@
+-==-
+
+Casting Functions
+Cast full 32-bit ints <> floats, with optional fixed point scales
+
+All integer inputs/outputs are either u32 or s32
+- Ints smaller than 32 use remaining bits as a fraction
+  - These bits allow part of the mantissa to persist in an integer format
+
+All float inputs/outputs are read with double precision
+- paired singles operations will simply duplicate resulting ps0->ps1
+  - When working with paired singles, consider hardware casting instead
+
+General-purpose fixed point casting can be done with 'fixed_*' ints
+- Custom fraction sizes can exceed actual bit size, as float
+- Negative scales will compress ints instead of add precision
+- Example fixed scales:  +8=1/256,  -8=256/1
+
+
+Cast Integer (r3) into -> Float (f1):
+
+  u32.float  # r3 -> f1 : 0xFFFFFFFF. : 0-bit fraction
+  u24.float  # r3 -> f1 : 0xFFFFFF.FF : 8-bit fraction
+  u16.float  # r3 -> f1 : 0xFFFF.FFFF : 16-bit fraction
+  u8.float   # r3 -> f1 : 0xFF.FFFFFF : 24-bit fraction
+  u0.float   # r3 -> f1 : 0x.FFFFFFFF : 32-bit fraction
+fixed_u32.float  # r3 = int,  r4 = fraction bit count
+
+  s64.float  # r3, r4 -> f1 : -0x7FFFFFFFFFFFFFFF
+  s32.float  # r3 -> f1 : -0x7FFFFFFF. : 0-bit fraction
+  s24.float  # r3 -> f1 : -0x7FFFFF.FF : 8-bit fraction
+  s16.float  # r3 -> f1 : -0x7FFF.FFFF : 16-bit fraction
+  s8.float   # r3 -> f1 : -0x7F.FFFFFF : 24-bit fraction
+fixed_s32.float  # r3 = int,  r4 = fraction bit count
+
+
+Cast Float (f1) into -> Integer (r3):
+
+  float.u32  # r3 <- f1 : 0xFFFFFFFF. : 0-bit fraction
+  float.u24  # r3 <- f1 : 0xFFFFFF.FF : 8-bit fraction
+  float.u16  # r3 <- f1 : 0xFFFF.FFFF : 16-bit fraction
+  float.u8   # r3 <- f1 : 0xFF.FFFFFF : 24-bit fraction
+  float.u0   # r3 <- f1 : 0x.FFFFFFFF : 32-bit fraction
+float.fixed_u32  # r3 = fraction bit count
+
+  float.s32  # r3 <- f1 : -0x7FFFFFFF. : 0-bit fraction
+  float.s24  # r3 <- f1 : -0x7FFFFF.FF : 8-bit fraction
+  float.s16  # r3 <- f1 : -0x7FFF.FFFF : 16-bit fraction
+  float.s8   # r3 <- f1 : -0x7F.FFFFFF : 24-bit fraction
+float.fixed_s32  # r3 = fraction bit count
+[Punkline]
+<s64.float> NTSC 1.02
+7C0802A6 9421FF00 90010104 9141002C 39410010 7C6AE5AA
+bl 0x80322da0
+39410010 7C6AE4AA 8141002C 80010104 38210100 7C0803A6 4E800020
+
+
+
+<u32.float> ALL
+38800000
+b <fixed_u32.float>
+<u24.float> ALL
+38800008
+b <fixed_u32.float>
+<u16.float> ALL
+38800010
+b <fixed_u32.float>
+<u8.float> ALL
+38800018
+b <fixed_u32.float>
+<u0.float> ALL
+38800020
+b <fixed_u32.float>
+<s32.float> ALL
+38800000
+b <fixed_s32.float>
+<s24.float> ALL
+38800008
+b <fixed_s32.float>
+<s16.float> ALL
+38800010
+b <fixed_s32.float>
+<s8.float> ALL
+38800018
+b <fixed_s32.float>
+<fixed_s32.float> ALL
+3C008000
+b <int.__fixed_cast>
+<fixed_u32.float> ALL
+38000000
+b <int.__fixed_cast>
+<int.__fixed_cast> ALL
+# handles signed/unsigned int->float with custom exponent
+9421FFE0 5484A016 9001000C 3C844330 7C600278 90810008 C8010008 9001000C C8210008 38210020 FC210028 4E800020
+
+
+<float.u32> ALL
+38600000
+b <float.fixed_u32>
+<float.u24> ALL
+38600008
+b <float.fixed_u32>
+<float.u16> ALL
+38600010
+b <float.fixed_u32>
+<float.u8> ALL
+38600018
+b <float.fixed_u32>
+<float.u0> ALL
+38600020
+b <float.fixed_u32>
+<float.s32> ALL
+38600000
+b <float.fixed_s32>
+<float.s24> ALL
+38600008
+b <float.fixed_s32>
+<float.s16> ALL
+38600010
+b <float.fixed_s32>
+<float.s8> ALL
+38600018
+b <float.fixed_s32>
+<float.fixed_s32> ALL
+3C004200
+b <int.__fixed_cast>
+<float.fixed_u32> ALL
+38000000
+b <float.__fixed_cast>
+<float.__fixed_cast> ALL
+# handles signed/unsigned float->ints with custom exponent
+9421FFE0 2C000000 D8210008 80810008 5463A016 7C841A14 3C603F00 90810008 C8210008 90610010 C0010010 FC21002A 41A20054 3000FFFF 3C60FFF0 90010008 9061000C 38000000 3C604F80 90010010 90610014 C0010010 C8410008 FC01006E FC220828 FC21102E C0410014 FC011000 FC011028 FC20082E 38000000 41A00008 3C008000 FC20081E D8210008 8061000C 7C630278 38210020 4E800020

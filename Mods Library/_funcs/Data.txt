@@ -1,0 +1,222 @@
+-==-
+
+Data Functions
+
+data.strcmp  # Compare 2 null-terminated strings
+args: rA, rB
+ <-- rBool
+
+data.cmp  # compare 2 lengths of binary
+args: rA, rB, rSize
+ <-- rBool
+
+data.point  # relocate various input types as pointer outputs
+args: rAddr   # type 1: Address of branch instruction (or pointer)
+args: rOffset, rAddr  # type 2: relocation from pointer
+ <-- rPoint, rBase, rOffset
+ <-- cr1.lt: bValidAddr,  cr1.gt: bIsBranch
+# - all output pointers from branches are considered valid
+
+
+data.zero  # fill out given area with zero
+args: rData, rSize
+
+data.fill  # fill out given area with a byte value
+args: rData, rFill, rSize
+
+data.copy  # Copies data from r4 over to r3
+args: rDest, rSource, rSize
+# - ARAM addresses are accepted for rSource/rDest
+# - DMA request for ARAM is slow, but faster than DVD
+
+data.copy_async  # Use async DMA queue with custom callback
+args: rDest, rSource, rSize, rCallback, rCallbackArg
+# - intended for ARAM <> SRAM copies
+# - rCallback will be executed once copy has finished
+
+  (sync callback arguments)
+  args: rCallbackArg
+
+
+data.async_info  # return info about pending async copies
+args: rQuery  # for matching rDest, rSource, rCB, or rArg
+ <-- rAsync, rDest, rSource, rSize, rCB, rArg, rGlob, rQuery
+ <-- cr1.lt: bNotSynced,  cr1.gt: bMatch,  cr1.eq: bSynced
+
+ rAsync  # Async ARAM Copy queue info struct...
+0x00 : POINT : to next info struct in queue
+0x04 : WORD  : Link ID -- 0=free, 1=async, 2=synced
+0x08 : POINT : to other struct + 8 (no header) ???
+0x0C : POINT : to header (offset 0x00)
+0x10 : FLAG? : usually '1'
+0x14 : ???
+0x18 : POINT : to Source address, for copy  (SRAM or DRAM)
+0x1C : POINT : to Destination address       (SRAM or DRAM)
+0x20 : WORD  : Size of remaining copy job (in bytes)
+0x24 : POINT : to Event Handler  (used by DMA queue?)
+0x28 : POINT : to Sync Callback  (provided by user)
+0x2C : WORD  : Callback Argument (for sync callback)
+
+rGlob # ARAM Async Info Globals...
+# - these correspond with the Link ID:
+0x00 : POINT : to list of currently free descriptors
+0x04 : POINT : to list of currently queued descriptors
+0x08 : POINT : to list of synced descriptors ready for callback
+
+data.sync_to  # sync to a matching .async_info query
+args: rQuery
+data.sync_until  # sync until a minimum of N queued asyncs
+args: rCount
+data.sync_next  # sync until the next queued async begins
+data.sync  # sync all queued async data copies
+# - all asyncs automatically sync when 4 or more asyncs are in queue
+# - syncing will cause the CPU to stall until data copy completes
+
+data.flush_DC  # flush data cache
+args: rAddr, rSize
+# - prevents race conditions with hardware accessing SRAM
+
+data.flush_IC  # flush instruction cache
+args: rAddr, rSize
+# - forces written ppc instructions to be newly-interpreted
+
+[Punkline]
+<data.point> NTSC ALL
+# relocate various input types as pointer outputs
+
+# --- args (syntax 1):
+# r3 = rAddr    -- address of branch instruction, pointer, or byte offset from rAddr
+# --- args (syntax 2):
+# r3 = rOffset  -- offset from base address
+# r4 = rAddr    -- base address
+
+# --- returns:
+# r3 = rPoint   -- the resulting pointer address value
+# r4 = rAddr    -- the base address used for this pointer
+# r5 = rOffset  -- the offset used for this base address
+# cr1.lt = bValidAddr  -- the resulting pointer is a valid address
+# cr1.gt = bIsBranch   -- the given input was a branch instruction
+3C008180 7C030000 4CA52902 7C651B78 40800038 80A30000 7C050000 7C641B78 40A00010 7CA42B78 38A00000 4800001C 54A317BE 2C030004 4CA21382 4082000C 54A3302E 7C653670 7C642A14 7C030000 4C800382 4E800020
+
+<data.zero> NTSC 1.02
+b 0x8000c160
+<data.fill> NTSC 1.02
+b 0x80003130
+<data.copy> NTSC 1.02
+2C030000 40800010 2C040000 40800008
+b 0x800031f4
+38C0FFFF
+b <data.copy_async>
+# using -1 as callback arg causes auto-sync callback to be used
+
+
+
+<data.copy_async> NTSC 1.02
+# Copies data from r4 over to r3, allowing for ARAM addresses and sync callbacks
+# - If a -1 is used in place of a callback address, this will become a sync copy instead of async
+# - otherwise, the CPU will not wait for ARAM on return, allowing for immediate action
+#   - the data being copied however will not be available for processing until ARAM has synced
+
+# --- args:
+# r3 = rCopy  - Copy data TO this address
+# r4 = rFrom  - Copy data FROM this address
+# r5 = rSize
+# r6 = rSync  - sync callback, executes once the ARAM copy has finished
+# r7 = rArg   - sync callback argument, gets passed as r3 to rSync when executed
+7C0802A6 9421FFC0 90010044 39410010 7C6AE5AA 38600004
+bl <data.sync_until>
+39410010 7C6AE4AA 48000018 4E800021 38000001 90030000 4E800020 00000000 2C06FFFF 40820034 4BFFFFE5 7CC802A6 38000000 38E6000C 90070000 90E10010 4800002D 80610010 80030000 2C000000 4082000C 4BFFFFF0 48000015 80010044 38210040 7C0803A6 4E800020 7C0802A6 3D008043 90010004 9421FFA8 BEE10034 7C992378 7C7A1B79 7CBB2B78 7CD73378 7CF83B78 611F16C0 7F64DB78 40800014 3BA00001 7F43D378
+bl 0x803447DC
+48000010 3BA00000 7F23CB78
+bl 0x80344840
+bl 0x80347364
+3BC30000 839F01E0 92FC0028 931C002C 7FB7EB78 3BBF01E0 801C0000 901D0000 387F01E4 48000008 7C030378 80030000 28000000 4082FFF4 93830000 38600000 38800001 907C0000 909C0004 3C608001 39434AC4 387C0008 7F84E378 7EE5BB78 68A60001 7F27CB78 7F48D378 7F69DB78
+b 0x80014c90
+
+<data.strcmp> NTSC 1.02
+b 0x803258e8
+<data.cmp> NTSC 1.02
+b 0x803258a8
+<data.flush_DC> NTSC 1.02
+b 0x8034480c
+<data.flush_IC> NTSC 1.02
+b 0x8000543c
+
+
+
+<data.async_info> NTSC 1.02
+# Get info about queued ARAM DMA copy jobs based on input query
+
+# --- args:
+# r3 = rQuery -- compared against rAsync, rDest, rSource, rCB, rArg for matches
+
+# --- returns:
+# cr1.lt = bNotSynced  -- 'matched async is not done copying'
+# cr1.gt = bMatch      -- 'match found'
+# cr1.eq = bSynced     -- 'no match found' (if input was valid, this means it synced already)
+# r3 = rAsync   -- async info (null if no match)
+# r4 = rDest   -- copy destination
+# r5 = rSource -- copy source
+# r6 = rSize   -- copy size
+# r7 = rCB     -- callback argument
+# r8 = rArg    -- callback address
+# r9 = rGlob   -- global pointers
+# r10 = rQuery -- (given query)
+
+# --- ARAM Async Info descriptor - 10 (?) 0x30-byte structures starting at 0x804316c0
+# 0x00 : POINT : to next info struct in queue
+# 0x04 : WORD  : Link ID -- 0=free, 1=async, 2=synced
+# 0x08 : POINT : to other struct + 8 (no header) ???
+# 0x0C : POINT : to header (offset 0x00)
+# 0x10 : FLAG? : usually '1'
+# 0x14 : ???
+# 0x18 : POINT : to Source address, for copy  (SRAM or DRAM)
+# 0x1C : POINT : to Destination address       (SRAM or DRAM)
+# 0x20 : WORD  : Size of remaining copy job (in bytes)
+# 0x24 : POINT : to Event Handler  (used by DMA queue?)
+# 0x28 : POINT : to Sync Callback  (provided by user)
+# 0x2C : WORD  : Callback Argument (for sync callback)
+
+# --- ARAM Async Info Globals - starting at 0x804316c0 + 0x1E0
+# - these correspond with the Link ID:
+# 0x00 : POINT : to list of currently free descriptors
+# 0x04 : POINT : to list of currently queued descriptors
+# 0x08 : POINT : to list of synced descriptors ready for callback
+7C6A1B78 2C0AFFFF 3D208043 612918A0 80090004 4CA52902 4C821382 7C030379 40800050 80030000 2C000000 4CA40102 7C035000 4CA51382 8083001C 7C045000 80A30018 4CA51382 7C055000 80E30028 4CA51382 7C075000 8103002C 4CA51382 7C085000 80C30020 4CA51382 4085FFB0 4CC52842 4C863042 4E800020
+
+
+
+<data.sync> NTSC 1.02
+3860FFFF
+b <data.sync_to>
+
+<data.sync_next> NTSC 1.02
+3C608043 806318A4
+b <data.sync_to>
+
+<data.sync_to> NTSC 1.02
+7C0802A6 9421FFE0 90010024 BFE10010 7FE000A6 57E0045E 7C000124
+bl <data.async_info>
+41860024 63E08000 7C000124 80090008 2C000000 41800010 80030004 2C000001 4182FFEC 7FE00124 BBE10010 80010024 38210020 7C0803A6 4E800020
+
+<data.sync_until> NTSC 1.02
+3C808043 608416C0 800401E8 2C000000 4D800020 38A00000 38C00184 34C6FFD0 41800018 7C04302E 2C000001 40A2FFF0 38A50001 4BFFFFE8 7C032800 41A0FFCC 4E800020
+
+<data.flush_DC> NTSC 1.02
+# Flush the data cache in given range
+# - useful for some forms of hardware reads, like GX indexing
+
+# --- args:
+# r3 = start address
+# r4 = number of bytes to flush
+b 0x8034480c
+
+
+<data.flush_IC> NTSC 1.02
+# Flush the instruction cache in given range
+# - required if writing new instructions over old instructions
+
+# --- args:
+# r3 = start address
+# r4 = number of bytes to flush
+b 0x8000543c

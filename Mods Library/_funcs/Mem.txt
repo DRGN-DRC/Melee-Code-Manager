@@ -1,0 +1,198 @@
+-==-
+
+Memory Management Functions
+
+mem.alloc  # Allocate dynamically managed memory
+mem.allocz # - alloc + zero out allocation
+args: rSize  # single arg syntax -- for generic heap allocations
+args: rID, rSize  # 2 args -- for allocating to cache regions
+ <-- rAlloc, rMeta, rAligned, rSize, rID
+ <-- cr1.lt: bIsAvailable,  cr1.gt: bIsARAM,  cr1.eq: bIsHeap
+ # returns rAlloc as alloc address, and rAligned as real size
+ # - if bAvailable is False -- rAlloc will be null
+
+# rMeta is heap/cache metadata:
+rMeta  # for OSHeap Fragment Metadata (ID 0)...
+0x0 = Previous Fragment
+0x4 = Next Fragment
+0x8 = Fragment size
+
+rMeta  # for Preload Cache Stack Frame Metadata...
+0x0 = Next frame
+0x4 = Point to cache alloc
+0x8 = Frame size
+
+# rID references one of the defeind caches/object heap
+rID  # Default HSD Memory Region IDs
+0 = HEAP  -- RAM  -- HSD Object Heap (OSHeap[1])
+1 = CACHE -- ARAM -- Excess ARAM fragment
+2 = CACHE -- RAM  -- Priority Archive Cache
+3 = CACHE -- RAM  -- Main Archive Cache
+4 = CACHE -- RAM  -- Preload Archive Cache
+5 = CACHE -- ARAM -- Aux Preload Archive Cache
+
+
+mem.free  # Free an allocation
+args: rAlloc  # dynamic heap allocation (freed to heap[1])
+
+
+mem.push  # change the size defs of arena/preload regions
+args: rID, rAdd  # IDs 0/1 are replaced with ArenaLo/Hi
+ <-- rSize, rAddr  # rAddr is only returned on Arena push
+ # NOTE: only takes place on scene changes
+ # NOTE: Arena can only be changed on game start
+
+
+mem.info  # has 3 input variations...
+args: rAddr  # return info about region and allocation (SRAM)
+ <-- rID, rMem, rHeap, rCache, rAlloc, rSize, rMeta, rOffset, rStatic, rString
+ <-- cr1.lt: bInRegion, cr1.gt: bIsAllocated, cr1.eq: bIsHeap
+ # rOffset measures input rAddr relative to rAlloc
+
+args: rID, rSize  # or return info about first found allocation
+ <-- rID, rMem, rHeap, rCache, rAlloc, rSize, rMeta, rOffset, rStatic, rString
+ <-- cr1.lt: bIsAvailable, cr1.gt: bIsARAM, cr1.eq: bIsHeap
+
+args: rID, -1  # or return info about current remaining space
+ <-- rID, rMem, rHeap, rCache, rFCount, rFBig, rFTotal, rACount, rABig, rATotal
+ <-- cr1.lt: bIsAvailable, cr1.gt: bIsARAM, cr1.eq: bIsHeap
+ # NOTE: this 3rd format is returned if no target is found
+
+rStatic  # Static region IDs 0 ... 10:
+"HEAD", "TEXT", "DATA", "BSS", "SDATA", "TOC", "TEMP", "LOW", "HSD", "HIGH", "FST"
+# NOTE: HSDMem encompasses all preload caches, and HSDHeap
+
+
+mem.ID  # return information about memory region, by ID
+args: rID  # rID is a number between 0 and 5
+ <-- rID, rMem, rHeap, rCache, rStart, rSize, rDef, rDefSize
+ <-- cr1.lt: bIsAvailable, cr1.gt: bIsARAM, cr1.eq: bIsHeap
+
+ rMem  # for IDs 0 ... 5
+ 0x0 = Heap ID  (if applicable)
+ 0x4 = point to Cache Boundary Descriptor (if applicable)
+ 0x8 = point to Address of Boundary Start
+ 0xC = Size of Region
+ 0x10 = Region Lo behavior
+ 0x14 = intialized flag? (1 = after init?)
+ 0x18 = disabled flag?   (1 = not available)
+
+ rHeap  # for ID 0, or any region modified to use OSHeap
+ 0x0 = total bytes (in initial fragment)
+ 0x4 = point to first Free Fragment Metadata
+ 0x8 = point to first Allocated Fragment Metadata
+
+ rCache  # for IDs 1 ... 5 -- mostly used for preloading
+ 0x0 = to next descriptor??
+ 0x4 = point to region boundary low pointer
+ 0x8 = point to region boundary high pointer
+ 0xC = point to first Cache Frame Metadata
+
+ rDef  # for IDs 2 ... 5 -- defined in the DOL
+ 0x0 = Memory Region ID (0 ... 5)
+ 0x4 = Behavior ID
+ 0x8 = Region ID to come after
+ 0xC = Region Size
+[Punkline]
+
+<mem.alloc> NTSC 1.02
+# Allocate a piece of memory available from one of 6 partitions
+
+# --- args:  Common
+# r3 = number of bytes (> 5)
+#    - all allocations are rounded up to the nearest 0x20 byte ceiling alignment
+#    - all allocations are collapsed at end of scene, and use OSHeap[1] -- the HSD Object heap
+
+# --- args:  Specific Partition
+# r3 = HSD Memory Region ID (<= 5)
+#    - 0  -- HEAP  -- RAM  -- HSD Object Heap (OSHeap[1])  - minor scene persistence
+#    - 1  -- CACHE -- ARAM -- Excess ARAM fragment         - minor scene persistence
+#    - 2  -- CACHE -- RAM  -- Priority Archive Cache       - full game persistence
+#    - 3  -- CACHE -- RAM  -- Main Archive Cache           - full game persistence
+#    - 4  -- CACHE -- RAM  -- Preload Archive Cache        - major scene persistence
+#    - 5  -- CACHE -- ARAM -- Aux Preload Archive Cache    - major scene persistence
+# r4 = number of bytes
+#    - all allocations are rounded up to the nearest 0x20 byte ceiling alignment
+#    - allocation volatility is determined by the region
+
+# --- returns:
+# cr1.lt = bIsAvailable -- there is metadata available for this region
+# cr1.gt = bIsARAM      -- ARAM can't be read/written to directly by the CPU
+# cr1.eq = bIsHeap      -- uses OSHeap metadata structure instead of HSD Cache metadata structure
+# r3 = address of allocation
+# r4 = Metadata for this allocation (different based on Heap or Cache)
+# r5 = number of bytes allocated (after alignment)
+# r6 = number of bytes allocated and zeroed (before alignemnt)
+# r7 = HSD Memory Region ID
+
+ # for OSHeap Fragment Metadata (ID 0)...
+ #   - 0x0 = Previous Fragment
+ #   - 0x4 = Next Fragment
+ #   - 0x8 = Fragment size
+
+ # for Preload Cache Stack Frame Metadata...
+ #   - 0x0 = Next frame
+ #   - 0x4 = Point to cache alloc
+ #   - 0x8 = Frame size
+ 38A00000
+ b <mem.__alloc_handler>
+
+<mem.allocz> NTSC 1.02
+38A00001
+b <mem.__alloc_handler>
+
+<mem.__alloc_handler> NTSC 1.02
+7C0802A6 9421FFB0 90010054 BF210030 7F200026 2C030005 7CA01120 3BE00000 7C7E1B78 3B600000 41A1000C 7C7F1B78 7C9E2378 381E001F 541D0035 7FE3FB78 7FC4F378
+bl <mem.info>
+4F040000 40980038 4FFFC902 7FE3FB78 7FC4F378
+bl 0x80015bd0
+7C7B1B78 3B9BFFE0 41BA000C 7C7C1B78 83630004 40BF0010 7F63DB78 7FC4F378
+bl 0x8000c160
+3B410010 4C980000 7F2BF120 BF7A0000 7C7AA4AA BB210030 80010054 38210050 7C0803A6 4E800020
+
+
+<mem.free> NTSC 1.02
+# Free a dynamically allocated fragment from the Object Heap
+# - can only be applied to allocations that have contiguous OSHeap metadata at offset -0x20
+
+# --- args:
+# r3 = start of allocation from OSHeap[1]
+b 0x8037f1b0
+
+
+<mem.push> NTSC 1.02
+# Push the size of a given memory region by adding/subtracting bytes to the size definition
+# - This 'pushes' or 'pops' memory to a region on next scene change
+# - OSArena pushes can only be made before the first scene has begun
+
+# --- args:
+# r3 = rID  NOTE: 0 and 1 can't be pushed, because they are remainders of total SRAM and DRAM
+#           - 0 has been replaced with 'OSArenaLo'
+#           - 1 has been replaced with 'OSArenaHi'
+# r4 = bytes to add/subtract to Region
+
+# --- return:
+# r3 = address of MemDef (or OSArena Pointer variable)
+# r4 = new byte total (or new OSArena push start address)
+3403FFFE 41800024 3C60803B 6063A380 1C000010 7C630214 8003000C 7C840214 9083000C 4E800020 80ADBCD0 800DA570 7CA02850 7C042851 41A10008 38800000 2C030000 386DA570 41820008 386DBCD0 80830000 7CA40214 90A30000 4D820020 7CA42B78 4E800020
+
+<mem.ID> NTSC 1.02
+2C830000 3D208043 61291F90 80A90000 39290020 7C032840 4C012042 38A00000 38C00000 38E00000 39000000 39400000 7CA40120 41A00018 38800000 810DBCD0 80EDA570 7D074050 4E800020 3C808043 60841FB0 1C03001C 7C840214 80040018 2C800001 4C800202 80040010 2C000002 4CA10B82 80040000 2C00FFFF 4CC10B82 4C840020 40860014 80ADBCC0 1C00000C 7CA50214 48000008 80C40004 3403FFFE 41A00014 1C000010 7D290214 8149000C 48000008 39200000 80E40008 8104000C 4E800020
+
+<mem.info> NTSC 1.02
+7C0802A6 9421FF70 90010094 BE210050 7E200026 7C7E1B78 7C9D2378 3F808180 3F600100 3A410010 7D1EE000 7C1ED840 4D080382
+bl <mem.ID>
+2C040000 4C804382 4D040000 4DA21042 4D8C6342 4D6B5902 38E00000 39000000 39200000 39400000 39600000 39800000 7CF2C5AA 7E72C4AA 408801F8 41AD0010 3860FFFF 2C1E0000 4D200042 4D8C6042 41AD00E8 418C0024 38630001
+bl <mem.ID>
+2C040000 4D000382 40A8FFB0 4D054A42 4D044202 40A8FFE4 4CA52902 4C842102 41A6006C 83660004 7C1ED800 83860008 4D600042 7C1EE000 4D6B0202 82C6000C 4C842342 3A600000 408BFFB0 2C160000 4080002C 82760004 7C1E9800 41A00014 82960008 7F949A14 7C1EE000 4180000C 82D60000 4BFFFFD8 4CA52B42 83860008 7E93E050 7EB3F050 48000148 3A600000 82C50008 40AC0008 82C50004 2C160000 40A0FF4C 7C1EB000 82960008 4D600042 7F96A214 7C1EE000 3A760020 4D6B0202 418B000C 82D60004 4BFFFFD4 4C842342 4CAC6042 4BFFFFB0 38000000 90010010 41A6007C 82C6000C 2C160000 8284000C 39800000 40800038 83360000 2C190000 4080002C 394A0001 83560008 7D8CD214 7C1A5800 40A1000C 7F4BD378 92C10010 7F36CB78 83360000 4BFFFFD4 7D2CA050 39000000 38E00000 7C1D4840 81610010 4C800382 4D642382 40840088 83860008 7D344B78 7E74E050 48000078 82C50004 4D6B5902 40AC001C 82C50008 7D475378 7D896378 7D685B78 39800000 39400000 2C160000 4080003C 82960008 418C000C 7C1DA040 4D600382 7C145800 394A0001 41A0000C 7E8BA378 92C10010 7D8CA214 3A760020 82D60004 418B0008 4BFFFFC4 4C8B6102 4D8C5B82 81610010 408CFE20 4D085A02 7C000026 5011010E 418D0038 7E72C5AA 41A80008 7FD3F378 41850024 3A520018 7C7285AA 7E639B78
+bl <mem.static>
+90B2FFF8 90D2FFFC 7C7284AA 3A52FFE8 7CF2C4AA 7E2FF120 BA210050 80010094 38210090 7C0803A6 4E800020
+
+
+<mem.static> NTSC 1.02
+lis r8, <<mem.static_boundaries>>@h
+ori r8, r8, <<mem.static_boundaries>>@l
+3D208000 88080000 88880002 7CE80214 3CA08043 60A51F90 80050010 90070020 80050014 90070024 80090038 90070028 7C032040 88080000 7CE80214 7C601B78 41A0003C 3C008180 7C030000 41A00014 3880FFFF 38A00000 38C00000 4E800020 3484FFFF 5480103A 41A0FFE8 7C07002E 7C030000 7C802378 4180FFE8 7C040378 38C80003 5480103A 7CA7002E 7C0620AE 7CC80214 4E800020
+
+<mem.static_boundaries> NTSC 1.02
+103C0B3C 41464B4F 55595D61 656A0000 80000000 80005940 803B7240 804316C0 804D36A0 804D79E0 804DEC00 804EEC00 00000000 00000000 00000000 48454144 00544558 54004441 54410042 53530053 44415441 00544F43 00525453 004C4F57 00485344 00484947 48004653 54000000

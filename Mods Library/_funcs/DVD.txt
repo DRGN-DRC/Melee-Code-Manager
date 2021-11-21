@@ -1,0 +1,381 @@
+-==-
+
+DVD Functions
+DVD.file
+ args: rFile  # rFile == rNum, rPath, or rOffset
+  <-- rNum, rPath, rSize, rAlign, rOffset, rFST, rFile
+  <-- cr1.eq: bInvalid
+  # rAlign is the rSize padded to ceiling 0x20 bytes
+
+  rFST  # File System Table element struct...
+  0x0 = Point to symbol string (path name)
+  0x4 = DVD Offset of file start
+  0x8 = Size of file on disk
+
+DVD.read
+ args: rFile, rOut  # rOut = address to output or an alloc region ID
+  <-- rNum, rOut, (null), rSize, (null), (null), rMeta, rPath, (null)
+  <-- cr1.eq: bInvalid
+
+DVD.read_async  # rCallback = function executed when load finishes
+ args: rFile, rOut, rSyncCB, rSyncArg
+  <-- rNum, rOut, (null), rSize, rSyncCB, (null), rMeta, rPath, rAsync
+  <-- cr1.eq: bInvalid,  cr1.lt: bNotSynced
+
+DVD.read_part  # rSize = size of partial load
+ args: rFile, rOut, rStart, rSize
+  <-- rNum, rOut, rStart, rSize, (null), (null), rMeta, rPath, (null)
+  <-- cr1.eq: bInvalid
+
+DVD.read_part_async  # rAsync = read-only async load info struct
+ args: rFile, rOut, rStart, rSize, rSyncCB, rSyncArg
+  <-- rNum, rOut, rStart, rSize, rSyncCB (null), rMeta, rPath, rAsync
+  <-- cr1.eq: bInvalid,  cr1.lt: bNotSynced
+
+
+DVD.async_info  # returned rAsync struct is 0x24 bytes
+args: rQuery  # rQuery accepts many input types -- see comments
+<-- rAsync, rNum, rQuery
+<-- cr1.lt: bNotSynced,  cr1.gt: bMatch,  cr1.eq: bSynced
+
+rAsync  # Async DVD read queue info struct...
+0x00 = to next info struct in async queue
+0x04 = unknown index
+0x08 = File Entry Number -- can be input into <DVD.file>
+0x0C = File Read Start -- offset of file to begin DVD read at
+0x10 = to output destination
+0x14 = File Read Size
+0x18 = flags:
+       +0x0038 : 3-bit, unknown ID:
+       +0x0020 : 4 unknown (hardcoded by HSD wrapper)
+       +0x0007 : 3-bit, 'Destination' ID
+       +0x0001 : 1 Virtual RAM (24MB)
+       +0x0003 : 3 Auxiliary RAM (16MB)
+0x1A = Error code (?) -- gets passed to sync callback as arg r6
+0x1C = to sync callback (or null, if not used)
+0x20 = sync callback argument -- passed as arg r4
+
+
+
+DVD.sync  # CPU waits for DVD to catch up entirely before continuing
+
+DVD.sync_to  # CPU waits for a specific DVD read before coninuing
+ args: rQuery
+
+
+ (sync callback args)  # --> passed rSyncCB;  r5 is usually null
+  args: rID, rSyncArg, r5, rErrorID
+   --
+[Punkline]
+
+<DVD.file> NTSC 1.02
+# Returns a file entrynum, a path string, a file size, and a dvd offset
+# --- args:
+# r3 = file
+#  - this can be...
+#    a file entrynumber -- nearly instant lookup
+#    a file offset, for DVD -- slow lookup
+#    a file path string pointer -- slowest lookup
+#      - recommended -- using a string is the safest choice, and can return entrynums for later use
+#        - entrynums and file offsets may otherwise vary based on disk configuration
+
+
+# --- returns:
+# cr1.eq = True if path was invalid
+# r3 = file entrynum -- or -1 if invalid
+# r4 = file path pointer (static FST -- do not edit, read-only)
+# r5 = file size
+# r6 = file size (aligned)
+# r7 = DVD offset
+# r8 = FST entry
+# r9 = (given path input argument)
+7C0802A6 9421FFE0 90010024 7C0902A6 90010010 BFE10014 7C7F1B79 80CDBBE0 810DBBDC 80EDBBE4 7CE903A6 40A00034 3C008180 7C1F0040 40800010
+bl 0x8033796c
+2C030000 4080FFD8 4CC63342 3860FFFF 38C00000 38A0FFFF 38C0FFFF 4800005C 7C1F3800 40A1002C 3860FFFF 38E8FFF8 8487000C 7C1F2000 80070004 7CA40214 7C9F2800 4C402842 38630001 4002FFE4 4CC63102 1C03000C 7D080214 80A80008 80880000 80E80004 3805001F 7C843214 54060034 7FE9FB78 BBE10014 80010010 7C0903A6 80010024 38210020 7C0803A6 4E800020
+
+# ---
+
+
+
+
+
+<DVD.read> NTSC 1.02
+# DVD outputs a whole file at target location in RAM
+# - game will stall while the file is loaded, and continue after finishing
+
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  =   0   -- (read offset is always 0 for full loads)
+# r6  = read size
+# r7  =   -1  -- (sync callback is always blank on synchronous loads)
+# r8  =   -1  -- (archive object are not created for non-archive loads)
+# r9  = Allocation Metadata
+# r10 = path string ()
+# r11 =   0   -- (async info object is not available for synchronous reads)
+38A00000 38C0FFFF 38E0FFFF 3900FFFF
+b <DVD.__read_handler>
+
+
+
+<DVD.read_async> NTSC 1.02
+# DVD outputs a whole file at target location in RAM over time
+# - game will return immediately while file loads
+# - you may provide a callback to run once the file has finished loading
+
+# --- function args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = sync callback (called once DVD has finished ready asynchronously)
+# r6 = sync callback arg (optional -- passed to sync callback)
+
+# --- sync callback args:
+# r3 = unknown index from 0x4(rAsync) -- sampled from -0x5650(r13) on async creation
+# r4 = Copy of arg r6 from function args
+# r5 = 0
+# r6 = 0 if no error from DVD
+# - do not attempt to sync DVD while in the middle of sync callback!
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  =   0   -- (read offset is always 0 for full loads)
+# r6  = file size
+# r7  = sync callback
+# r8  =   -1  -- (archive object are not created for non-archive loads)
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = async file info pointer
+7CA72B78 7CC93378 38C0FFFF 38A00000 3900FFFF
+b <DVD.__read_handler>
+
+
+
+<DVD.read_part> NTSC 1.02
+# DVD outputs a specified contiguous section of a file
+# - game will stall while file is loaded, and continue after finishing
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = file read offset (0 is start)
+# r6 = bytes to load
+# - offset and bytes are unsigned, and will cap at file boundaries
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  = read offset
+# r6  = read size (-1 if unable to load file)
+# r7  =   -1  -- (sync callback is always blank on synchronous loads)
+# r8  =   -1  -- (archive object are not created for non-archive loads)
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = 0
+38E0FFFF 3900FFFF
+b <DVD.__read_handler>
+
+
+
+<DVD.read_part_async> NTSC 1.02
+# DVD outputs a specified contiguous section of a file over time
+# - game will return immediately while file loads
+# - you may provide a callback to run once the file has finished loading
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = file read offset (0 is start)
+# r6 = bytes to load  -- (offset and bytes are unsigned, and will cap at file boundaries)
+# r7 = sync callback
+# r8 = sync callback arg (optional -- passed to sync callback)
+
+# --- sync callback recieves the following args:
+# r3 = unknown index from 0x4(rAsync) -- sampled from -0x5650(r13) on async creation
+# r4 = Copy of arg r8 from function args
+# r5 = 0
+# r6 = 0 if no error from DVD
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3 = entrynum
+# r4 = output location
+# r5 = read offset
+# r6 = read size (-1 if unable to load file)
+# r7 = sync callback
+# r8  =   -1  -- (archive object are not created for non-archive loads)
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = async file info pointer
+7D094378 3900FFFF
+b <DVD.__read_handler>
+
+
+
+# ---
+
+
+
+
+<DVD.async_info> NTSC 1.02
+# Returns pointer to a specific element in DVD async event queue, or null if query isn't found
+# - async elements are structures that are dynamically linked together when queued
+# - as a special case, if Query is -1, then the first element of the queue is returned
+
+# --- args:
+# r3 = file, async info, sync callback, or output destination
+#    Arg is used to identify one of the async file read info structs in the async queue
+#    - if query has a sign bit, it checks the mentioned pointers in each element for a match
+#    - otherwise, it will check for a matching entrynumber instead
+#      - in cases where a pointer check fails, it is checked for a path string with <DVD.file>
+#        - if the path string produces an entrynum, then a second pass is made with the entrynum
+#    - if no match is made, then a null is returned and cr1.gt is false
+
+# --- returns:
+# cr1.lt = 'not synced'
+# cr1.gt = 'match found'
+# cr1.eq = 'synced'
+# r3 = async info (null if no match)
+# r4 = entrynum   (-1 if no match)
+# r5 = (given query)
+
+# --- Async Info structure:  - pointed to by returned r3
+#    0x00 : POINT : to next info struct in async queue
+#    - you may reach every queued read by following these linked pointers
+#    0x04 : WORD  : unknown index -- gets passed to sync callback as r3 arg
+#    0x08 : WORD  : File Entry Number -- can be input into <DVD.file> for info about the file
+#    0x0C : WORD  : File Read Start -- offset of file to begin DVD read at
+#    0x10 : POINT : to output destination
+#    0x14 : WORD  : File Read Size
+#    0x18 : HWORD : flags:
+#                 + 0038 = 3-bit, unknown ID:
+#                   0020 :  4 unknown (hardcoded by HSD wrapper -- maybe a hardware ID?)
+#                 + 0007 = 3-bit, 'Destination' ID:
+#                   0001 :  1 Virtual RAM (24MB)
+#                   0003 :  3 Auxiliary RAM (16MB)
+#    0x1A : HWORD : Error code (?) -- gets passed to sync callback as arg r6
+#    0x1C : POINT : to sync callback (or null, if not used)
+#    0x20 : WORD  : sync callback argument (or null, if not used) -- passed as arg r4
+7C0802A6 9421FFE0 90010024 BFA10010 7FA00026 2C03FFFF 83CDC158 7C7F1B78 40A20014 806DC158 2C830000 4CA42382 48000090 2C1F0000 2C9E0000 4CA52902 40840080 41810060 2C1FFFFF 41820074 48000034 7C1EF800 801E0010 807E001C 7D00F800 801E0020 7D83F800 7E00F800 4CA25382 4CA57382 4CA59382 41850044 83DE0000 2C9E0000 4184FFCC 7FE3FB78
+bl <DVD.file>
+4BFFFFA0 83DE0000 2C9E0000 40840020 801E0008 7C00F800 4CA21382 41850010 83DE0000 2C9E0000 4184FFE8 7FC3F379 3880FFFF 7FE5FB78 41820008 809E0008 4CC52842 4C863042 7FABF120 BBA10010 80010024 38210020 7C0803A6 4E800020
+
+
+
+
+<DVD.sync_to> NTSC 1.02
+# Causes the CPU to stall until a specified file read has finished syncing from DVD->RAM
+#  CPU will not stall if no file reads are recognized by arg input
+#  CPU stall for ALL pending file reads if arg '-1' is given
+
+# --- args:
+# r3 = file, async info, sync callback, or output destination
+# - checks each element in async_info queue for matching addresses
+# - if one isn't found, input is fed into <DVD.file>, and the entrynums are checked against result
+# - if entrynum isn't found in second pass, then no sync is made
+7C0802A6 9421FFC0 90010044 BFE10030 3BE10010 7C7FE5AA 80610010
+bl <DVD.async_info>
+4186000C
+bl 0x800195d0
+4BFFFFF0 7C7FE4AA BBE10030 80010044 38210040 7C0803A6 4E800020
+
+
+
+
+<DVD.sync> NTSC 1.02
+# Causes the CPU to stall untill all pending file reads are finished syncing from DVD -> RAM
+# - no args/returns
+3860FFFF
+b <DVD.sync_to>
+
+
+# ---
+
+
+<DVD.__read_handler> NTSC 1.02
+# Handles various types of read function inputs with verbose argument interface
+# - this is a low level function with a complex, but versatile interface
+# - the other DVD.read* funcs are made by wrapping around this function
+
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = file read offset (0 is start)
+# r6 = bytes to load
+# - offset and bytes are unsigned, and will cap at file boundaries
+# r7 = sync callback (0 for none)
+# r8 = archive object (-1 for none, else syntax is similar to r4)
+# r9 = sync callback arg (optional -- passed to sync callback)
+
+# --- sync callback args:
+# r3 = unknown index from 0x4(rAsync) -- sampled from -0x5650(r13) on async creation
+# r4 = Copy of arg r9 from function args
+# r5 = 0
+# r6 = 0 if no error from DVD
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  = read offset
+# r6  = read size (-1 if unable to load file)
+# r7  = sync callback (if applicable)
+# r8  = archive object (if applicable)
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = async file info pointer (if applicable)
+# Handles various types of read function inputs with verbose argument interface
+# - this is a low level function with a complex, but versatile interface
+# - the other DVD.read* funcs are made by wrapping around this function
+
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = file read offset (0 is start)
+# r6 = bytes to load
+# - offset and bytes are unsigned, and will cap at file boundaries
+# r7 = sync callback (0 for none)
+# r8 = archive object (-1 for none, else syntax is similar to r4)
+# r9 = sync callback arg (optional -- passed to sync callback)
+
+# --- sync callback args:
+# r3 = unknown index from 0x4(rAsync) -- sampled from -0x5650(r13) on async creation
+# r4 = Copy of arg r9 from function args
+# r5 = 0
+# r6 = 0 if no error from DVD
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  = read offset
+# r6  = read size (-1 if unable to load file)
+# r7  = sync callback (if applicable)
+# r8  = archive object (if applicable)
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = async file info pointer (if applicable)
+7C0802A6 9421FF90 90010074 BE810034 3A810010 7C74E5AA
+bl <DVD.file>
+90740000 BAF40000 82B40018 3BA00000 3BC00000 3BE00000 418600BC 7C771B78 7C9E2378 7ED92850 7C1AB040 40A10008 7EDAB378 3ADA001F 56D60034 7F03C379 41A0002C 2C030005 40800024 7EC4B378
+bl 0x80015bd0
+2C1C0002 7C781B78 3BA3FFE0 41A0000C 7C7D1B78 831D0004 7F05C379 38E00023 40A00008 38E00021 7F69DB78 2C09FFFF 40820008 39200000 7EE3BB78 7F24CB78 7EC6B378 39000001 7EAAAB78
+bl 0x8038f6d4
+2C1BFFFF 40A20020
+bl <DVD.sync>
+2C1CFFFF 41820020 7F83E378 7F04C378 38A00000
+bl <arch.init>
+7EE3BB78
+bl <DVD.async_info>
+7C7F1B78 2C170000 BEF40000 4CC00382 2C1F0000 7C7404AA 4C821042 BA810034 80010074 38210070 7C0803A6 4E800020

@@ -1,0 +1,97 @@
+-==-
+
+Trigonometry Functions
+
+sin
+cos
+tan
+asin
+acos
+atan  # all of these have a similar f1 interface
+args: fAngle
+<-- fOutput
+
+atan2
+args: fY, fX
+<-- fAtan2
+[?]
+
+
+
+<sin> NTSC 1.02
+# Calculate sine of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fSin
+b 0x803263d4
+
+
+
+<cos> NTSC 1.02
+# Calculate cosine of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fCos
+b 0x80326240
+
+
+
+<tan> NTSC 1.02
+# Calculate tangent of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fTan
+b 0x803261bc
+
+
+
+
+<asin> NTSC 1.02
+# Calculate arcsine of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fAsin
+b 0x80022dbc
+
+
+
+<acos> NTSC 1.02
+# Calculate arccosine of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fAcos
+b 0x80022d1c
+
+
+
+<atan> NTSC 1.02
+# Calculate arctangent of angle in f1
+# --- args:
+# f1 = fAngle
+
+# --- returns:
+# f1 = fAtan
+b 0x80022e68
+
+
+
+<atan2> NTSC 1.02
+# Calculate atan2 of f1
+# --- args:
+# f1 = fY
+# f2 = fX
+
+# --- returns:
+# f1 = fAtan2
+b 0x80022c30
+

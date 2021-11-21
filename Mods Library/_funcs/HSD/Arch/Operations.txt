@@ -1,0 +1,171 @@
+
+-==-
+
+Archive Functions
+
+
+DVD.read_archive  # rArch = alloc (or region ID) for output archive obj
+args: rFile, rOut, rArch
+<-- rNum, rOut, (null), rSize, (null), rArch, rMeta, rPath, (null)
+<-- cr1.eq: bInvalid
+
+arch.symbol  # Look up region in file using a symbol string
+args: rArch, rString
+<-- rAddr, rString
+# - rArch may be ArchObj or File start
+# - rAddr will be null if not found
+
+arch.init  # Initialize an archive, if not already initialized
+args: rAlloc, rFile, rDict
+<-- rArch
+# - rAlloc may be a 0x44-byte alloc, or a mem.ID (0...5)
+# - rDict will use default symbol events, if null
+
+# Init will use a dictionary to trigger arch.event
+# - events are only triggered on first attempt to call
+
+# Default init symbols are checked for if argument is null:
+"init.flush"  # flushes instruction cache for regions of the file
+"init.call"   # triggers callbacks included in the file
+"init.static" # creates static pointers to parts of the file
+
+# DVD.read_arch uses this default dictionary
+
+
+
+arch.check_init  # Check to see if file has already been relocated
+args: rFile
+<-- cr1.lt: bInitialized,  cr1.gt: bRelocated,  cr1.eq: bNoRelocs
+# - bInitialized  is true only if reloc was proven
+# - bRelocated  is true when initialized, or no relocs are needed
+# - bNoRelocs  is true when no relocs are in the reloc table
+#   - having no relocs prevents bInitialized from being proven
+
+arch.event  # Launch callbacks to handle matching symbols from dictionary
+args: r3 ... r10, rArch, rDict, cr1 ... cr7
+# - r3 ... r9 are passed to each callback (r10 is ignored)
+# - rArch (r11) can be an ArchObj or a File
+# - rDict (r12) must be formatted like below...
+
+rDict  # Archive Symbol Event Dictionary format:
+0x00 : WORD  : pointer count
+0x04 : ARRAY : start of pointer table (0x4-byte elements)
+
+# Each dictionary entry points to a callback that starts with:
+0x00 : BRANCH INSTRUCTION : (branch over the following string)
+0x04 : STRING : null-terminated symbol string definition
+...  : BRANCH DESTINATION : (callback instructions)
+
+arch.init  # relocate and initialize an archive file (*.dat)
+args: rArch, rFileStart, rDict
+# If rDict is given as null, then default symbols will be used from arch.dict.init_default_events
+
+arch.symbol
+args: rArchive, rSymbol
+<-- rAddr
+[HSD, Punkline]
+
+<DVD.read_archive> NTSC 1.02
+# DVD outputs a DAT or USD file, and then initializes it
+# - archive object will use or generate a 0x44-byte allocation that can be used to reference symbols
+# --- args:
+# r3 = file (entrynum, path string pointer, or dvd offset)
+# r4 = output location (addr=target, 0=dynamic, 3=persistent, 4=semi-persistent)
+# r5 = archive object (-1 for none, else syntax is similar to r4)
+
+# --- returns:
+# cr1.eq = warning 'File not found'
+# cr1.lt = warning 'File still loading'
+# r3  = entrynum
+# r4  = output location
+# r5  =   0   -- (read offset is always 0 for full loads)
+# r6  = file size
+# r7  =   -1  -- (sync callback is always blank on synchronous loads)
+# r8  = archive object
+# r9  = Allocation Metadata
+# r10 = path string
+# r11 = 0
+7CA82B78 38A00000 38C0FFFF 38E0FFFF
+b <DVD.__read_handler>
+
+
+<arch.symbol> NTSC 1.02
+# Look up a symbol string in a given Archive Object to return the part of the file it represents
+
+# --- args:
+# r3 = archive object (or file start)
+# r4 = search query (address of string)
+
+# --- returns:
+# r3 = address of file section (or 0 if symbol not found)
+# r4 = given query
+7C0802A6 9421FF90 90010074 BFC10060 7C7F1B78 80BF0040 2C050000 7C9E2378 40800014 801F0000 80A50000 7C002800 41A20048 80C3000C 3BE10010 90DF000C 38830020 80030004 909F0020 7CA40214 80030008 5404103A 7CA52214 80030010 54C61838 90BF0028 54001838 7CA62A14 7C050214 901F0030 7FE3FB78 7FC4F378
+bl 0x80380358
+7FC4F378 BBC10060 80010074 38210070 7C0803A6 4E800020
+
+<arch.check_init> NTSC 1.02
+# Check if an archive file has already been relocated
+
+# --- args:
+# r3 = start of archive file
+
+# --- returns:
+# r3 = start of archive file
+# r4 = start of archive relocation  (null if no reloc table)
+# r5 = start of archive data (relocation base address)
+# cr1.lt = bInitialized -- a relocated pointer was found
+# cr1.gt = bRelocated -- true if bInitiailized OR bNoRelocs
+# cr1.eq = bNoRelocs -- true if no pointers need relocation
+80030008 80830004 2C800000 38A30020 7C052214 38800000 41860014 7C040378 80040000 7C05002E 2C000000 4C803102 4CA62382 4E800020
+
+
+<arch.init> NTSC 1.02
+# Initialize a newly loaded archive file (DAT or USD file)
+# - init will skip already-initialized files to prevent corruption of pointers in data sections
+# - if a memory region ID is given instead of an allocation address, an allocation will be generated
+
+# --- args:
+# r3 = allocation for writing Archive Object information
+# r4 = File start -- to be initialized
+# r5 = initialization event symbol dictionary (or 0 for defaults)
+
+# --- returns:
+# r3 = instantiated archive object (from given r3)
+
+# --- callback event interface:
+# r3 = arch.init.event.rParams -- symbol region, for params
+# r4 = arch.init.event.rArch   -- the archive object for this file
+# r5 = arch.init.event.rCB     -- address of callback (self -- for local data)
+7C0802A6 9421FFD0 90010034 7C000026 90010010 BF610014 7CBC2B79 7C9E2378 4180000C
+lis r0, <<arch.dict.init_default_events>>@h
+ori r28, r0, <<arch.dict.init_default_events>>@l
+7C7F1B79 41A0001C 38800044
+bl 0x80015bd0
+2C1F0002 7C7F1B78 41A00008 83E30004 7FC3F378
+bl <arch.check_init>
+41840020 7FE3FB78 7FC4F378 80BE0000
+bl 0x80016a54
+7F8CE378 7FEBFB78
+bl <arch.event>
+7FE3FB78 BB610014 80010010 7C0FF120 80010034 38210030 7C0803A6 4E800020
+
+<arch.event> NTSC 1.02
+# Pass a dictionary of symbol:callback entries to this handler to trigger them as events
+
+# --- args:
+# r3...r9 = (stuff you want to give to each symbol-triggered callback in the event)
+# r10 = (unused)
+# r11 = archive object (will trigger callbacks for each matching symbol in dictionary)
+# r12 = archive symbol event dictionary  (see format below)
+
+# --- dictionary format:
+# 0x0 = number of element pointers
+# 0x4 = start of n-element table array... (not a pointer)
+
+# --- dictionary element format:
+# 0x0 = branch instruction -> callback start
+# 0x4 = start of a null-terminated symbol string representing this event
+#     - string must be unique for this dictionary, and becomes a key for matching symbol in file
+7C0802A6 9421FFA0 90010064 BF610040 7FE00026 3BC10010 7D7B5B78 7C7EE5AA 7D9C6378 83BC0000 37BDFFFF 41800044 849C0004 7F63DB78 2C040000 40A0FFEC 38840004
+bl <arch.symbol>
+2C030000 4080FFDC 7C6A1B78 7C7EE4AA 7FEFF120 819C0000 7F6BDB78 7D8803A6 4E800021 4BFFFFBC BB610040 80010064 38210060 7C0803A6 4E800020

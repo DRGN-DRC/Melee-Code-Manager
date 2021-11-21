@@ -1,0 +1,10 @@
+-==-
+CObj Constructors
+
+CObj.loadDesc
+args: rCObjDesc
+<- rCObj
+
+[HSD]
+<CObj.loadDesc> NTSC 1.02
+b 0x8036a590

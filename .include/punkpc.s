@@ -4,4 +4,5 @@
 .endif
 module.library punkpc, ".s", ppc
 .endif
-punkpc.subdir "punkpc/", ".s"
+punkpc.maindir "punkpc/"
+punkpc.subdir "", ".s"

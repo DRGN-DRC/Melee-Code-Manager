@@ -1,0 +1,10 @@
+-==-
+WObj Constructors
+
+WObj.loadDesc
+args: rWObjDesc
+<- rWObj
+
+[HSD]
+<WObj.loadDesc> NTSC 1.02
+b 0x8037d3c4

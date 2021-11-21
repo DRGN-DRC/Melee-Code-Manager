@@ -1,0 +1,187 @@
+-==-
+
+GObj Operations
+
+Functions:
+
+GObj.run_GProcs  # normally called by frame event loop...
+GObj.run_GXDraw
+args: (none)
+
+GObj.get_flag
+args: rOffset
+<-- rFlag
+
+GObj.PLink_get
+GObj.GXLink_get
+These can be used to return a GObj from the global PLink (Processing) or GXLink (Drawing) groups for the current scene.
+args: rLink, rClass, rIndex
+<-- rGObj
+
+# if rLink is a GObj address, then it is used as base link
+# - else, rLink is an ID between 0...63
+
+# if rClass is -1, then any class will qualify for lookup
+# if rIndex is is out of bounds, then NULL rGObj is returned
+# rIndex can be positive or negative to navigate next/prev
+
+
+
+GObj Methods:
+# the following all take a GObj argument in r3
+
+GObj.new_GProc  # also attaches GProc to GObj
+args: rGObj, rProcCB, rSPriority
+<-- rGProc
+
+GObj.clear_all_GProcs
+args: rGObj
+
+GObj.PLink_append  # insert as next PLink
+args: rGObj, rPrevGObj
+
+GObj.GXLink_append # insert as next GXLink
+args: rGObj, rPrevGObj
+
+GObj.destroy  # destroys HSD Obj, Data, and GProcs, too
+args: rGObj
+
+GObj.GXLink_setup  # sets up a GXDraw callback for Obj
+args: rGObj, rDrawCB, rGXLink, rGXPriority
+
+GObj.GXLink_setup_camera  # sets up a Drawing camera
+args: rGObj, rDrawCB, rGXLink, rGXPriority
+
+GObj.GXLink_destructor
+args: rGObj
+
+GObj.object_init  # attach an object instance to GObj
+args: rGObj, rObjType, rObj
+# rObjTypes:  0=SObj, 1=CObj, 2=LObj, 3=JObj, 4=Fog
+
+GObj.object_release  # remove without destroying
+args: rGObj
+<-- rObj
+
+GObj.object_destroy  # remove and run HSD destructor
+args: rGObj
+
+
+GObj.data_init  # attach a data table to GObj
+args: rGObj, rDataType, rDestrCB, rData
+
+GObj.data_destroy  # remove and run provided rDestrCB
+args: rGObj
+
+
+GObj.camera_set_texture
+args: rGObj, rPasses
+
+GObj.camera_set
+args: rGObj
+[HSD, Punkline]
+
+<GObj.run_GProcs> NTSC 1.02
+b 0x80390CFC
+<GObj.run_GXDraw> NTSC 1.02
+b 0x80390FC0
+# args: (none)
+
+<GObj.get_flag> NTSC 1.02
+b 0x80390EB8
+# args: rOffset
+# <-- rFlag
+
+<GObj.new_GProc> NTSC 1.02
+b 0x8038FD54
+# args: rGObj, rProcCB, rSPriority
+# <-- rGProc
+
+<GObj.clear_all_GProcs> NTSC 1.02
+b 0x8038FED4
+# args: rGObj
+
+<GObj.PLink_append> NTSC 1.02
+b 0x8038FF5C
+# args: rGObj, rPrevGObj
+
+<GObj.GXLink_append> NTSC 1.02
+b 0x8039063C
+# args: rGObj, rPrevGObj
+
+<GObj.destroy> NTSC 1.02
+b 0x80390228
+# args: rGObj
+
+<GObj.GXLink_setup> NTSC 1.02
+b 0x8039069C
+# args: rGObj, rDrawCB, rGXLink, rGXPriority
+
+<GObj.GXLink_setup_camera> NTSC 1.02
+b 0x8039075C
+# args: rGObj, rDrawCB, rGXLink, rGXPriority
+
+<GObj.GXLink_destructor> NTSC 1.02
+b 0x8039084C
+# args: rGObj
+
+<GObj.object_init> NTSC 1.02
+b 0x80390A70
+# args: rGObj, rObjType, rObj
+
+<GObj.object_release> NTSC 1.02
+b 0x80390ADC
+# args: rGObj
+# <-- rObj
+
+<GObj.object_destroy> NTSC 1.02
+b 0x80390B0C
+# args: rGObj
+
+
+<GObj.data_init> NTSC 1.02
+b 0x80390B68
+# args: rGObj, rDataType, rDestrCB, rData
+
+<GObj.data_destroy> NTSC 1.02
+b 0x80390BE4
+# args: rGObj
+
+
+<GObj.camera_set_texture> NTSC 1.02
+b 0x80390ED0
+# args: rGObj, rPasses
+
+<GObj.camera_set> NTSC 1.02
+b 0x803910D8
+# args: rGObj
+
+
+<GObj.get_PLink> NTSC 1.02
+38C0C18C
+b <GObj.__get_link>
+<GObj.get_GXLink> NTSC 1.02
+38C0C184
+b <GObj.__get_link>
+<GObj.__get_link> NTSC 1.02
+2C050000 38E00008 40A00010 38E0000C 38C6FFFC 7CA500D0 2C06C184 41A10008 38E70008 2C040000 7CC6682E 4180000C 5484103A 7C84302E 2C040000 40800028 2C03FFFF 41820010 A0040000 7C001800 40A2000C 34A5FFFF 4180000C 7C84382E 4BFFFFD8 7C832378 4E800020
+
+
+-==-
+GProc Operations
+
+Methods:
+GProc.link
+GProc.free
+GProc.reparent
+ args: rGProc
+# these all just take a sole GProc argument
+[HSD]
+
+<GProc.link> NTSC 1.02
+b 0x8038FAA8
+<GProc.free> NTSC 1.02
+b 0x8038FC18
+<GProc.reparent> NTSC 1.02
+b 0x8038FCE4
+# args: rGProc

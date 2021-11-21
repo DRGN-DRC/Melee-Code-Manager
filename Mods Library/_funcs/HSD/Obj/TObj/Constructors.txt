@@ -1,0 +1,22 @@
+-==-
+TObj Constructors
+
+TObj.loadDesc
+args: rTObjDesc
+<- rTObj
+
+Tlut.loadDesc
+args: rTlutDesc
+<- rTlut
+
+TObjTev.loadDesc
+args: rTevDesc
+<- rTev
+
+[HSD]
+<TObj.loadDesc> NTSC 1.02
+b 0x8035ed28
+<Tlut.loadDesc> NTSC 1.02
+b 0x8035edc0
+<TObjTev.loadDesc> NTSC 1.02
+b 0x8035ee14
