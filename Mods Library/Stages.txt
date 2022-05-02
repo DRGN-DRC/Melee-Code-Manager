@@ -121,6 +121,55 @@ PAL ------- 0x1CB0B8 ---- 801B0014 -> 4800013C ---- (lwz r0,20(r27) -> b 0x13C)
 	-==-
 
 
+Lagless FoD 4 Player or Dolphin (1.02)
+Always Lagless FoD when playing on Dolphin Emulator.
+Console Lagless FoD when four or more players are in the match.
+Character shadow render flag added to the water.
+Fixed water color.
+Addressed code in the OP causing a console crash.
+<https://smashboards.com/threads/lagless-fountain-of-dreams-with-platforms.447974/post-21788614>
+[Achilles, Myougi, Dan Salvato]
+Revision ---- DOL Offset ---- Hex to Replace ---------- ASM Code -
+NTSC 1.02 --- 0x801CBB90 ---- 9421FFF8 -> Branch
+
+9421FFF8 3C608000
+8063002C 546300C7
+40820040 38800000
+38C00000 3C608045
+60633088 1CA40E90
+7CA5182E 2C050003
+41A20008 38C60001
+38840001 2C040006
+4082FFE4 38A00004
+2C060004 41A00028
+3CC0804A 80C6ED78
+3CA00002 60A5AE44
+7CA53050 88C50000
+60C60004 98C50000
+38A00008 48000035
+7C6802A6 3863FFF4
+8483000C 2C040000
+4182007C 7CC5182E
+90C40000 38000000
+7C0027AC 7C0004AC
+4C00012C 4BFFFFDC
+4E800021 801CC8AC
+EC0007FA FC000028
+801CBE9C 4BFFC29D
+60000000 801CBEF0
+80840030 60000000
+801CBF54 48000BC5
+60000000 80390838
+4BFFFE05 60000000
+801CD250 48174F81
+60000000 801CCDCC
+387F01D4 480000B4
+48000000
+
+
+	-==-
+
+
 Peach's Castle - Disable Switches and Bullet Bills
 [Zauron]
 Version -- DOL Offset ------ Hex to Replace ---------- ASM Code
