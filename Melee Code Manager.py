@@ -3,10 +3,10 @@
 
 							# ------------------------------------------------------------------- #
 						   # ~ ~ Written by DRGN of SmashBoards (Daniel R. Cappel); June, 2015 ~ ~ #
-							#       -       -       [Python v2.7.9 & 2.7.12]      -       -       #
+							#       -       -       [Python v2.7.9 - 2.7.16]      -       -       #
 							# ------------------------------------------------------------------- #
 
-programVersion = '4.4'
+programVersion = '4.4.1'
 
 # # Find the official thread here:
 # http://smashboards.com/threads/melee-code-manager-easily-add-codes-to-your-game.416437/
@@ -26,8 +26,6 @@ from string import hexdigits # For checking that a string only consists of hexad
 from binascii import hexlify
 from collections import OrderedDict
 from sets import Set # Used for duplicate mod detection and other unique lists
-try: from cStringIO import StringIO # For compiling/decompiling. cStringIO referred for performance.
-except: from StringIO import StringIO
 
 # GUI stuff
 from Tkinter import Tk, Toplevel, Frame, StringVar, IntVar, BooleanVar, Label, OptionMenu, Spinbox, Button, Menu, Scrollbar, Canvas
@@ -582,7 +580,8 @@ class dolInitializer( object ):
 
 class geckoInitializer( object ):
 
-	""" Validates Gecko configuration settings in the settings.py file, collects info, and ensures Gecko codes can be utilzed. """
+	""" Collects and validates Gecko configuration settings from the 
+		settings.py file and ensures Gecko codes can be used. """
 
 	def __init__( self ):
 		self.reset()
@@ -695,8 +694,8 @@ class geckoInitializer( object ):
 
 	def getGeckoCodehandler( self ):
 		# Get the Gecko codehandler from an existing .bin file if present, or from the settings.py file
-		if os.path.exists( scriptHomeFolder + '\\codehandler.bin' ):
-			with open( scriptHomeFolder + '\\codehandler.bin', 'rb' ) as binFile:
+		if os.path.exists( scriptHomeFolder + '\\bin\\codehandler.bin' ):
+			with open( scriptHomeFolder + '\\bin\\codehandler.bin', 'rb' ) as binFile:
 				geckoCodehandler = bytearray( binFile.read() )
 		else:
 			geckoCodehandler = bytearray.fromhex( settingsFile.geckoCodehandler )
@@ -922,10 +921,7 @@ def readRecievedFile( filepath, defaultProgramStatus='', checkForCodes=True ):
 		# The other standard save buttons will become enabled once changes are detected.
 
 	# Load the DOL file to be modded (from a disc or DOL file path)
-	# tic = time.clock()
 	dol.load( normalizedPath )
-	# toc = time.clock()
-	# print '\nDOL load time:', toc-tic
 	dol.loadCustomCodeRegions()
 
 	# Remember the given path and file type for later defaults
@@ -1537,10 +1533,10 @@ class ModsLibraryParser():
 				mod.webLinks = []
 				if webLinks:
 					for item in webLinks:
-						if len( item ) == 2:
-							mod.webLinks.append( item )
-						elif type( item ) == str: # Probably just a URL missing the comment
+						if not isinstance( item, list ): # Probably just a URL missing the comment
 							mod.webLinks.append( (item, '') )
+						elif len( item ) == 2:
+							mod.webLinks.append( item )
 
 				buildSet = codeset.get( 'build' )
 
@@ -1584,14 +1580,8 @@ class ModsLibraryParser():
 				else: # Build all subfolders/files
 					self.errors.append( "No 'build' section found in codes.json" )
 
-		else: # Grab everything from the current folder (and subfolders). Assume .s are static overwrites, and .asm are injections
-			# Typecast the authors and description lists to strings
-			# authors = ', '.join( codeset['authors'] )
-			# description = '\n'.join( codeset['description'] )
-			
-			# mod = CodeMod( codeset['name'], authors, description, fullFolderPath, True )
-
-			self.errors.append( "No 'codes' section found in codes.json" ) #todo
+		else:
+			self.errors.append( "No 'codes' section found in codes.json" )
 
 	def buildCodeModule( self, mod ):
 
@@ -2545,9 +2535,11 @@ def collectAllStandaloneFunctions( forAllRevisions=False ): # depricate forAllRe
 
 					if not functionName in functionsDict:
 						functionsDict[ functionName ] = ( -1, codeChange[4], codeChange[5] )
+						print functionName, 'loaded from', mod.name
 
 					# If the function is already in the dictionary, make sure any copies found are identical (because the first copy found will be used for all mods calling it)
 					elif functionsDict[ functionName ][2] != codeChange[5]:
+						print '\tduplicate of', functionName, 'in', mod.name
 						msg( 'Warning! Differing versions of the standalone function, "' + functionName + '", have been detected! '
 							 'Only the first variation found will be used. '
 							 '\n\nIf these are meant to be different functions, they must have different names. If they are meant to be the same function, '
@@ -4759,77 +4751,10 @@ def goToMod( modNameText, matchOffset=0 ):
 	return True
 
 
-def updateHighlightAnimation1( modModule ): # Depricate in favor of the polynomial function?
-
-	""" Fades a color into another color by reducing each of its RGB color channels by an amount proportional to its initial value.
-		Each channel is reduced by 1 / [stepSize] of its original starting value, thus all values will reach their respective target values at the same time. 
-		
-			i.e. 	Example starting color of 20, 40, 40 (RGB), with 5 steps.
-					Step size will then be 4, 8, 8 for the respective channels.
-				Step 0:		Step 1:		Step 2:		etc...
-					R: 20		R: 16		R: 12
-					G: 40		G: 32		G: 24
-					B: 40		B: 32		B: 24
-	"""
-	# tic=time.clock()
-
-	steps = 5.0 # This will shift each color channel by 1 / x, for the current iteration (therefore this exponentially decreases)
-
-	# Convert the current color (a name or hex string) to an RGB tuple
-	encodedCurrentColor = modModule['background']
-	#print 'updating highlight for "' + modModule.name + '".', 'current color:', encodedCurrentColor
-	if not encodedCurrentColor.startswith( '#' ): 
-		currentColor = name2rgb( encodedCurrentColor )
-	else: 
-		currentColor = hex2rgb( encodedCurrentColor )
-
-	targetColor = name2rgb( 'SystemButtonFace' )
-
-	#print 'current color RGB:', currentColor, '  target color RGB:', targetColor
-
-	step_R = ( targetColor[0] - currentColor[0] ) / steps
-	step_G = ( targetColor[1] - currentColor[1] ) / steps
-	step_B = ( targetColor[2] - currentColor[2] ) / steps
-
-	#print 'step sizes:', step_R, step_G, step_B
-
-	# Check if all color channels are similar
-	colorsCloseInColor = True
-	newChannelValues = []
-	for i, colorStep in enumerate( (step_R, step_G, step_B) ):
-		#if (colorStep <= 0 and colorStep > -3) or (colorStep >= 0 and colorStep < 3):
-		#print 'iteration', i, ':', abs( targetColor[i] - currentColor[i] )
-		if abs( targetColor[i] - currentColor[i] ) < steps:
-			# These color channels are close
-			newChannelValues.append( targetColor[i] )
-			#continue
-		else:
-			colorsCloseInColor = False
-			newChannelValues.append( int(round( currentColor[i] + colorStep )) )
-			#break
-
-	if colorsCloseInColor:
-		modModule['background'] = 'SystemButtonFace'
-		modModule.highlightFadeAnimationId = None
-	else:
-		# One of the color channels didn't match above (it's too different between "from" and "to" colors)
-		# newR = int(round( currentColor[0] + step_R ))
-		# newG = int(round( currentColor[1] + step_G ))
-		# newB = int(round( currentColor[2] + step_B ))
-		#modModule['background'] = rgb2hex( (currentColor[0] + step_R, currentColor[1] + step_G, currentColor[2] + step_B) )
-		#modModule['background'] = rgb2hex( (newR, newG, newB) )
-		modModule['background'] = rgb2hex( newChannelValues )
-		modModule.highlightFadeAnimationId = modModule.after( 170, lambda mod=modModule: updateHighlightAnimation(mod) )
-		# toc=time.clock()
-		# print 'time to update color (method 1):', toc-tic
-
-
 def updateHighlightAnimation( modModule, x=2 ):
 	
 	""" Fades a color into another using a polynomial function. Each channel of the color is gradually changed
 		by a percentage of its initial value, so each color follow the same rate of change. """
-
-	# tic=time.clock()
 
 	initialColor = getattr( modModule, 'initColor', None )
 	if not initialColor:
@@ -4847,18 +4772,13 @@ def updateHighlightAnimation( modModule, x=2 ):
 	diff_G = targetColor[1] - initialColor[1]
 	diff_B = targetColor[2] - initialColor[2]
 
-	#print 'diffs:', diff_R, diff_G, diff_B
-
 	# Determine the percentage/progress to apply to the range of color (this formula plots a nice curve that starts fast, but then slows exponentially)
 	percentChange = ( -0.0123*x**4 + 0.4865*x**3 - 7.3018*x**2 + 50.747*x - 43.45 ) / 100
-	#print 'percentage of diffs:', diff_R * percentChange, diff_G * percentChange, diff_B * percentChange
 
 	# Determine what to change each color channel to (its initial color plus a percentage of the range of change)
 	new_R = int(round( initialColor[0] + (diff_R * percentChange) ))
 	new_G = int(round( initialColor[1] + (diff_G * percentChange) ))
 	new_B = int(round( initialColor[2] + (diff_B * percentChange) ))
-
-	#print 'percent change:', percentChange, '   new color channel values:', ( new_R, new_G, new_B )
 
 	# End after 13 iterations (this is just before the peak of the polynomial plot above)
 	if x == 13:
@@ -4868,8 +4788,6 @@ def updateHighlightAnimation( modModule, x=2 ):
 		x += 1
 		modModule['background'] = rgb2hex( ( new_R, new_G, new_B ) )
 		modModule.highlightFadeAnimationId = modModule.after( 170, lambda mod=modModule, iteration=x: updateHighlightAnimation(mod, iteration) )
-		# toc=time.clock()
-		# print 'time to update color:', toc-tic
 
 
 def enterSearchMode( event=None ):
@@ -5961,13 +5879,15 @@ class ModConstructor( Frame ):
 
 	def _getRequiredStandaloneFunctionNames( self ):
 		
-		""" Gets the names of all standalone functions this mod requires. """
+		""" Gets the names of all standalone functions this mod requires. 
+			Returns two lists: functionNames, and missingFunctions. Note that 
+			the functionNames list will also include those in missingFunctions. """
 
 		if not self.gameVersionsNotebook or not self.gameVersionsNotebook.tabs(): # Latter check is a failsafe; not expected
 			return [], []
 
-		functionNames = set()
-		missingFunctions = set()
+		functionNames = []
+		missingFunctions = []
 
 		# Iterate over each game revision
 		for windowName in self.gameVersionsNotebook.tabs()[:-1]: # Ignores versionChangerTab.
@@ -5985,9 +5905,10 @@ class ModConstructor( Frame ):
 				# If the current code change module is a standalone function, make sure it's not in the set of "missing" SFs
 				if codeChangeModule.changeType == 'standalone' and missingFunctions:
 					thisFunctionName = self.getInput( codeChangeModule.offset )
-					missingFunctions.remove( thisFunctionName )
+					if thisFunctionName in missingFunctions:
+						missingFunctions.remove( thisFunctionName )
 
-		return list( functionNames ), list( missingFunctions ) # functionNames will also include those that are missing
+		return functionNames, missingFunctions
 
 	def saveModToLibraryAs( self ):
 
@@ -6416,8 +6337,6 @@ class AsmToHexConverter( basicWindow ):
 		ttk.Button( self.window, text='View Include Paths', command=self.viewIncludePaths ).grid( column=0, row=3, pady=(2, 6), ipadx=20 )
 
 		# Add the assembly time display
-		#self.assemblyTime = StringVar()
-		#Label( self.window, textvariable=self.assemblyTime ).grid( column=0, row=3, sticky='w', padx=(7, 0) )
 		self.assemblyTimeDisplay = Tkinter.Entry( self.window, width=25, borderwidth=0 )
 		self.assemblyTimeDisplay.configure( state="readonly" )
 		self.assemblyTimeDisplay.grid( column=0, row=3, sticky='w', padx=(7, 0) )
@@ -6438,7 +6357,6 @@ class AsmToHexConverter( basicWindow ):
 	def asmToHexCode( self ):
 		# Clear the current hex code field, and assembly time display
 		self.hexCodeEntry.delete( '1.0', 'end' )
-		#self.assemblyTimeDisplay.delete( 0, 'end' )
 		self.updateAssemblyDisplay( '' )
 
 		# Get the ASM to convert
@@ -6451,7 +6369,6 @@ class AsmToHexConverter( basicWindow ):
 
 		if returnCode != 0:
 			self.lengthString.set( 'Length: ' )
-			#self.assemblyTime.set( '' )
 			return
 
 		# Insert the new hex code
@@ -6472,15 +6389,11 @@ class AsmToHexConverter( basicWindow ):
 			else:
 				assemblyTime = assemblyTime * 1000
 				units = 'us' # In microseconds
-		#self.assemblyTime.set( 'Assembly Time:  {} us'.format(assemblyTime) ) # In microseconds
-		#self.assemblyTimeDisplay.insert( 0, 'Assembly Time:  {} {}'.format(assemblyTime, units) )
 		self.updateAssemblyDisplay( 'Assembly Time:  {} {}'.format(assemblyTime, units) )
 
 	def hexCodeToAsm( self ):
 		# Delete the current assembly code, and clear the assembly time label
 		self.sourceCodeEntry.delete( '1.0', 'end' )
-		#self.assemblyTime.set( '' )
-		#self.assemblyTimeDisplay.delete( 0, 'end' )
 		self.updateAssemblyDisplay( '' )
 
 		# Get the HEX code to disassemble
@@ -7853,7 +7766,7 @@ class CommandProcessor( object ):
 		compilationPlaceholder = 'DEADBEFE'
 		branchMarker = 'stfdu f21,-16642(r13)'
 
-		if type( codeLinesList ) == str:
+		if type( codeLinesList ) != list:
 			codeLinesList = codeLinesList.splitlines()
 
 		# Filter out the special branch syntax, and remove comments.

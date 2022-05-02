@@ -1,7 +1,12 @@
-Written in Python v2.7.12 by DRGN of SmashBoards (Daniel R. Cappel).
+Written in Python v2.7.16 by DRGN of SmashBoards (Daniel R. Cappel).
+Compiled using cx-Freeze v5.1.1
+
 
 Find the official thread here for usage and other documentation: 
 http://smashboards.com/threads/melee-code-manager-easily-add-codes-to-your-game.416437/
 
 
 Check out the second post in the thread above for detailed info on some of this program's functionality and uses.
+
+If you're looking for the "settings.py" file, it's now located within the "lib" folder.
+If you're looking for the "codehandler.bin" file, it's now located within the "bin" folder.

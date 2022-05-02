@@ -1,8 +1,7 @@
 # Created by Daniel Cappel ("DRGN")
-# Script version: 2.1
+# Script version: 2.2
 
 from cx_Freeze import setup, Executable
-from shutil import copyfile
 import sys, os
 
 programName = "Melee Code Manager"
@@ -13,18 +12,17 @@ preserveConsole = False # For the console to work, search for the string "loggin
 
 buildOptions = dict(
 	packages = [], 
-	excludes = [], 
+	excludes = [ 'settings' ], # Prevent from adding module to lib/library.zip, to read from lib/settings.py instead
 	include_files = [
 		'.include',
 		'About.txt',
 		'bin',
 		'defaultOptions.ini',
-		'codehandler.bin',
 		'imgs',
 		'Mods Library',
+		'Original DOLs',
 		'settings.py',
 		'sfx',
-		'Original DOLs',
 		'tk', # For drag 'n drop functionality.
 	])
 
@@ -52,7 +50,7 @@ print 'Preparing setup....'
 simpleVersion = '.'.join( [char for char in mainScript.programVersion.split('.') if char.isdigit()] )
 
 setup(
-		name=programName,
+		name = programName,
 		version = simpleVersion,
 		description = 'DOL Modding Program for GameCube and Wii Games.',
 		options = dict( build_exe = buildOptions ),
@@ -68,10 +66,10 @@ print 'Platform architecture:  ', platformArchitecture
 # Get the name of the new program folder that will be created in '\build\'
 scriptHomeFolder = os.path.abspath( os.path.dirname(__file__) )
 buildFolder = os.path.join( scriptHomeFolder, 'build' )
-programFolder = ''
+builtProgramFolder = ''
 for directory in os.listdir( buildFolder ):
 	if directory.startswith( 'exe.' ): # e.g. "exe.win-amd64-2.7"
-		programFolder = os.path.join( buildFolder, directory )
+		builtProgramFolder = os.path.join( buildFolder, directory )
 		break
 else: # The loop above didn't break
 	print 'Unable to locate the new program folder!'
@@ -80,7 +78,7 @@ else: # The loop above didn't break
 # Delete extra (test) .include items
 #keepTheseIncludes = ( 'CommonMCM.s', 'punkpc' ) # Files other than these in the new .include folder will be deleted (assumed to be test files)
 # try:
-# 	rootIncludeFolder = os.path.join( programFolder, '.include' )
+# 	rootIncludeFolder = os.path.join( builtProgramFolder, '.include' )
 # 	for item in os.listdir( rootIncludeFolder ):
 # 		if item not in keepTheseIncludes:
 # 			os.remove( os.path.join( rootIncludeFolder, item ) )
@@ -90,14 +88,19 @@ else: # The loop above didn't break
 # 	print err
 
 # Rename the default options (.ini) file
-os.rename( programFolder + '\\defaultOptions.ini', programFolder + '\\options.ini' )
+os.rename( builtProgramFolder + '\\defaultOptions.ini', builtProgramFolder + '\\options.ini' )
 
-# Create a new name for the progam folder (and make sure it's unique) and rename it
+# Create a new name for the progam folder (ensuring it's unique) and rename it
 newProgramFolderName = '{} - v{} ({})'.format( programName, mainScript.programVersion, platformArchitecture )
 newProgramFolderPath = os.path.join( buildFolder, newProgramFolderName )
 i = 2
 while os.path.exists( newProgramFolderPath ):
 	newProgramFolderPath = os.path.join( buildFolder, newProgramFolderName + ' ' + str( i ) )
 	i += 1
-os.rename( programFolder, newProgramFolderPath )
-print 'Program folder renamed to', os.path.basename( newProgramFolderPath )
+os.rename( builtProgramFolder, newProgramFolderPath )
+print 'Program folder renamed to "{}"'.format( newProgramFolderName )
+
+# Move the settings.py configuration file to the lib folder
+source = os.path.join( newProgramFolderPath, 'settings.py' )
+destination = os.path.join( newProgramFolderPath, 'lib', 'settings.py' )
+os.rename( source, destination )
