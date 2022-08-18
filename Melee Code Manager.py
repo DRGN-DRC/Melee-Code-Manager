@@ -6,7 +6,7 @@
 							#       -       -       [Python v2.7.9 - 2.7.16]      -       -       #
 							# ------------------------------------------------------------------- #
 
-programVersion = '4.4.1'
+programVersion = '4.4.2'
 
 # # Find the official thread here:
 # http://smashboards.com/threads/melee-code-manager-easily-add-codes-to-your-game.416437/
@@ -3461,6 +3461,7 @@ def saveCodes(): # (i.e. the magic)
 
 	genGlobals['modifiedRegions'] = [] # Used to track static overwrites and to watch for conflicts
 	defaultGameSettingsInstalled = False
+	standaloneFunctionsUsed = []	# Tracks functions that actually make it into the DOL
 
 	if not onlyUpdateGameSettings.get():
 		# Check for conflicts among the code regions selected for use
@@ -3485,7 +3486,6 @@ def saveCodes(): # (i.e. the magic)
 		programStatus.set( 'Gathering Preliminary Data...' )
 		programStatusLabel.update()
 
-		standaloneFunctionsUsed = []	# Tracks functions that actually make it into the DOL
 		spaceForGeckoCodelist = gecko.spaceForGeckoCodelist *2 # This is the max number of characters (nibbles) available in the region designated for the codelist (in settings.py)
 		geckoCodelistRegionFull = False
 		removingSomeGeckoCodes = False
